@@ -1,6 +1,7 @@
 import logging
 import os
 from datetime import datetime
+from .config import get_instance as get_config
 
 # 定义颜色代码
 class Colors:
@@ -35,7 +36,13 @@ class ColoredConsoleHandler(logging.StreamHandler):
         self.stream.write(f"{color}{message}{Colors.RESET}\n")
         self.flush()
 
-def init(log_dir="logs", log_file="log", log_level=logging.INFO, console_log_level=logging.DEBUG):
+def init():
+    config = get_config()
+    log_dir = config.get("log", "log_dir", fallback="logs")
+    log_file = config.get("log", "log_file", fallback="if.u.service")
+    log_level = config.get("log", "log_level", fallback=logging.INFO)
+    console_log_level = config.get("log", "console_log_level", fallback=logging.DEBUG)
+
     # 创建logs目录（如果不存在）
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
