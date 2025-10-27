@@ -19,6 +19,7 @@ class PeopleORM(Base):
     __tablename__ = 'peoples'
     id = Column(String(36), primary_key=True)
     name = Column(String(255), index=True)
+    contact = Column(String(255), index=True)
     gender = Column(String(10))
     age = Column(Integer)
     height = Column(Integer)
@@ -33,6 +34,7 @@ class PeopleORM(Base):
         import json
         self.id = people.id
         self.name = people.name
+        self.contact = people.contact
         self.gender = people.gender
         self.age = people.age
         self.height = people.height
@@ -47,6 +49,7 @@ class PeopleORM(Base):
         people = People()
         people.id = self.id
         people.name = self.name
+        people.contact = self.contact
         people.gender = self.gender
         people.age = self.age
         people.height = self.height

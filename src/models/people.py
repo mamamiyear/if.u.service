@@ -10,6 +10,8 @@ class People:
     id: str
     # 姓名
     name: str
+    # 联系人
+    contact: str
     # 性别
     gender: str
     # 年龄
@@ -38,10 +40,10 @@ class People:
         # 初始化所有属性，从kwargs中获取值，如果不存在则设置默认值
         self.id = kwargs.get('id', '') if kwargs.get('id', '') is not None else ''
         self.name = kwargs.get('name', '') if kwargs.get('name', '') is not None else ''
+        self.contact = kwargs.get('contact', '') if kwargs.get('contact', '') is not None else ''
         self.gender = kwargs.get('gender', '') if kwargs.get('gender', '') is not None else ''
         self.age = kwargs.get('age', 0) if kwargs.get('age', 0) is not None else 0
         self.height = kwargs.get('height', 0) if kwargs.get('height', 0) is not None else 0
-        # self.weight = kwargs.get('weight', 0) if kwargs.get('weight', 0) is not None else 0
         self.marital_status = kwargs.get('marital_status', '') if kwargs.get('marital_status', '') is not None else ''
         self.match_requirement = kwargs.get('match_requirement', '') if kwargs.get('match_requirement', '') is not None else ''
         self.introduction = kwargs.get('introduction', {}) if kwargs.get('introduction', {}) is not None else {}
@@ -68,10 +70,10 @@ class People:
         return {
             'id': self.id,
             'name': self.name,
+            'contact': self.contact,
             'gender': self.gender,
             'age': self.age,
             'height': self.height,
-            # 'weight': self.weight,
             'marital_status': self.marital_status,
             'match_requirement': self.match_requirement,
             'introduction': self.introduction,
@@ -86,9 +88,7 @@ class People:
             'gender': self.gender,
             'age': self.age,
             'height': self.height,
-            # 'weight': self.weight,
             'marital_status': self.marital_status,
-            # 'match_requirement': self.match_requirement,
         }
         logging.info(f"people meta: {meta}")
         return meta
@@ -102,8 +102,6 @@ class People:
             doc.append(f"年龄: {self.age}")
         if self.height:
             doc.append(f"身高: {self.height}cm")
-        # if self.weight:
-            # doc.append(f"体重: {self.weight}kg")
         if self.marital_status:
             doc.append(f"婚姻状况: {self.marital_status}")
         if self.match_requirement:

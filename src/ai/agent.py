@@ -25,7 +25,6 @@ class ExtractPeopleAgent(BaseAgent):
                 "性别 gender\n"
                 "年龄 age\n"
                 "身高(cm) height\n"
-                # "体重(kg) weight\n"
                 "婚姻状况 marital_status\n"
                 "择偶要求 match_requirement\n"
                 "以上信息需要严格按照 JSON 格式输出 字段名与条目中英文保持一致。\n"
