@@ -22,8 +22,9 @@ def main():
     vsdb.init()
     people_store.init()
     conf = config.get_instance()
+    host = conf.get('web_service', 'server_host', fallback='127.0.0.1')
     port = conf.getint('web_service', 'server_port', fallback=8099)
-    uvicorn.run(api, host="127.0.0.1", port=port)
+    uvicorn.run(api, host=host, port=port)
 
 if __name__ == "__main__":
     main()
