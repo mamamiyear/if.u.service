@@ -65,10 +65,6 @@ class ChromaDB:
     def __init__(self, **kwargs):
         """
         Initialize the ChromaDB instance.
-        
-        Args:
-            persist_directory: Optional directory to persist the database.
-                              If None, the database will be in-memory only.
         """
         config = get_config()
         self.embedding_functions = embedding_functions.OpenAIEmbeddingFunction(
@@ -77,6 +73,7 @@ class ChromaDB:
             model_name=config.get("voc-engine_embedding", "endpoint"),
         )
         persist_directory = config.get("chroma_vsdb", "database_dir", fallback=None)
+        logging.debug(f"persist_directory: {persist_directory}")
         if persist_directory:
             self.client = chromadb.PersistentClient(
                 path=persist_directory,
@@ -189,10 +186,9 @@ class ChromaDB:
             ids=ids,
             include=["documents", "metadatas", "distances"],
         )
-        print("log: results keys: ", results.keys())
-        print("log: results ids: ", results['ids'])
         formatted_results = []
         for i in range(len(results['ids'][0])):
+            logging.info(f"result id: {results['ids'][0][i]}, distance: {results['distances'][0][i]}")
             result = {
                 'id': results['ids'][0][i],
                 'distance': results['distances'][0][i],
