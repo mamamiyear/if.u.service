@@ -34,6 +34,8 @@ class People:
     introduction: Dict[str, str]
     # 总结评价
     comments: Dict[str, str]
+    # 封面
+    cover: str = None
     
 
     def __init__(self, **kwargs):
@@ -48,6 +50,7 @@ class People:
         self.match_requirement = kwargs.get('match_requirement', '') if kwargs.get('match_requirement', '') is not None else ''
         self.introduction = kwargs.get('introduction', {}) if kwargs.get('introduction', {}) is not None else {}
         self.comments = kwargs.get('comments', {}) if kwargs.get('comments', {}) is not None else {}
+        self.cover = kwargs.get('cover', None) if kwargs.get('cover', None) is not None else None
 
     def __str__(self) -> str:
         return self.tonl()
@@ -78,6 +81,7 @@ class People:
             'match_requirement': self.match_requirement,
             'introduction': self.introduction,
             'comments': self.comments,
+            'cover': self.cover,
         }
     
     def meta(self) -> Dict[str, str]:

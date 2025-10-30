@@ -33,9 +33,7 @@ class PostInputRequest(BaseModel):
 
 @api.post("/input")
 async def post_input(request: PostInputRequest):
-    extra_agent = ExtractPeopleAgent()
-    people = extra_agent.extract_people_info(request.text)
-    logging.info(f"people: {people}")
+    people = extract_people(request.text)
     resp = BaseResponse(error_code=0, error_info="success")
     resp.data = people.to_dict()
     return resp
@@ -65,8 +63,17 @@ async def post_input_image(image: UploadFile = File(...)):
     ocr_result = ocr_util.recognize_image_text(obs_url)
     logging.info(f"ocr_result: {ocr_result}")
     
-    post_input_request = PostInputRequest(text=ocr_result)
-    return await post_input(post_input_request)
+    people = extract_people(ocr_result, obs_url)
+    resp = BaseResponse(error_code=0, error_info="success")
+    resp.data = people.to_dict()
+    return resp
+
+def extract_people(text: str, cover_link: str = None) -> People:
+    extra_agent = ExtractPeopleAgent()
+    people = extra_agent.extract_people_info(text)
+    people.cover = cover_link
+    logging.info(f"people: {people}")
+    return people
 
 class PostPeopleRequest(BaseModel):
     people: dict

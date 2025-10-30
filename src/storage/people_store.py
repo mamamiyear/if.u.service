@@ -27,11 +27,11 @@ class PeopleORM(Base):
     match_requirement = Column(Text)
     introduction = Column(Text)
     comments = Column(Text)
+    cover = Column(String(255), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
     deleted_at = Column(DateTime(timezone=True), nullable=True, index=True)
     def parse_from_people(self, people: People):
-        import json
         self.id = people.id
         self.name = people.name
         self.contact = people.contact
@@ -43,9 +43,9 @@ class PeopleORM(Base):
         # 将字典类型字段序列化为JSON字符串存储
         self.introduction = json.dumps(people.introduction, ensure_ascii=False)
         self.comments = json.dumps(people.comments, ensure_ascii=False)
+        self.cover = people.cover
     
     def to_people(self) -> People:
-        import json
         people = People()
         people.id = self.id
         people.name = self.name
@@ -65,7 +65,8 @@ class PeopleORM(Base):
             people.comments = json.loads(self.comments) if self.comments else {}
         except (json.JSONDecodeError, TypeError):
             people.comments = {}
-        
+
+        people.cover = self.cover
         return people
 
 class PeopleStore:
