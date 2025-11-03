@@ -15,4 +15,7 @@ dependencies = [
     "python-multipart>=0.0.20",
     "qiniu>=7.17.0",
     "requests>=2.32.5",
+    "whoosh>=2.7.4",
+    "jieba>=0.42.1",
+    "sqlalchemy>=2.0.44",
 ]

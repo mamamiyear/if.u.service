@@ -31,6 +31,7 @@ class PeopleORM(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
     deleted_at = Column(DateTime(timezone=True), nullable=True, index=True)
+    
     def parse_from_people(self, people: People):
         self.id = people.id
         self.name = people.name
@@ -212,7 +213,6 @@ class PeopleStore:
 def init():
     global people_store
     people_store = PeopleStore()
-
 
 def get_instance() -> PeopleStore:
     return people_store

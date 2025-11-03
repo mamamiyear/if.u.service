@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+# created by mmmy on 2025-11-03
+# OCR text from image
 
 import json
 import logging
