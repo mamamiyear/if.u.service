@@ -10,6 +10,7 @@ from sqlalchemy.orm import sessionmaker
 from utils.config import get_instance as get_config
 from utils.vsdb import VectorDB, get_instance as get_vsdb
 from utils.obs import OBS, get_instance as get_obs
+from utils.kwdb import KeywordDB, WhooshDB, get_instance as get_kwdb
 
 from models.people import People
 
@@ -77,6 +78,7 @@ class PeopleStore:
         Base.metadata.create_all(self.sqldb_engine)
         self.session_maker = sessionmaker(bind=self.sqldb_engine)
         self.vsdb: VectorDB = get_vsdb()
+        self.kwdb: KeywordDB = get_kwdb()
         self.obs: OBS = get_obs()
     
     def save(self, people: People) -> str:
@@ -107,7 +109,21 @@ class PeopleStore:
         if len(results) == 0:
             raise Exception("insert failed")
         
-        # 3. 保存到 OBS 存储
+        # 3. 保存到关键词数据库
+        people_kw_text = people.to_kw_text()
+        people_kw_tags = people.to_kw_tags()
+        kwdb_doc = {
+            "id": people.id,
+            "description": people_kw_text,
+            "requirement": people.match_requirement,
+            "tags": ",".join(people_kw_tags),
+        }
+        doc_id = self.kwdb.upsert(kwdb_doc)
+        logging.info(f"doc_id: {doc_id}")
+        if doc_id != people.id:
+            raise Exception("upsert failed")
+        
+        # 4. 保存到 OBS 存储
         people_dict = people.to_dict()
         people_json = json.dumps(people_dict, ensure_ascii=False)
         obs_url = self.obs.Put(f"peoples/{people.id}/detail.json", people_json.encode('utf-8'))
@@ -163,6 +179,8 @@ class PeopleStore:
         :return: 人物对象列表
         """
         peoples = []
+
+        # 1. 从向量数据库查询人物ID
         results = self.vsdb.search(document=search, metadatas=metadatas, ids=ids, top_k=top_k)
         logging.info(f"results: {results}")
         people_id_list = []
@@ -172,6 +190,18 @@ class PeopleStore:
                 continue
             people_id_list.append(people_id)
         logging.info(f"people_id_list: {people_id_list}")
+        
+        # 2. 从关键词数据库查询人物ID
+        results = self.kwdb.search(query=search)
+        logging.info(f"results: {results}")
+        for result in results:
+            people_id = result.get('id', '')
+            if not people_id:
+                continue
+            people_id_list.append(people_id)
+        logging.info(f"people_id_list: {people_id_list}")
+        
+        
         with self.session_maker() as session:
             people_orms = session.query(PeopleORM).filter(PeopleORM.id.in_(people_id_list)).filter(
                 PeopleORM.deleted_at.is_(None)

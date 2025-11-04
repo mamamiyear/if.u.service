@@ -120,6 +120,36 @@ class People:
                 doc.append(f" - {key}: {value}")
         return '\n'.join(doc)
 
+    def to_kw_text(self) -> str:
+        # 将对象转换为关键词数据库文档格式的字符串
+        doc = []
+        doc.append(f"姓名: {self.name}")
+        doc.append(f"性别: {self.gender}")
+        if self.age:
+            doc.append(f"年龄: {self.age}")
+        if self.height:
+            doc.append(f"身高: {self.height}cm")
+        if self.marital_status:
+            doc.append(f"婚姻状况: {self.marital_status}")
+        if self.match_requirement:
+            doc.append(f"择偶要求: {self.match_requirement}")
+        if self.introduction:
+            doc.append("个人介绍:")
+            for key, value in self.introduction.items():
+                doc.append(f" - {key}: {value}")
+        tags = self.to_kw_tags()
+        doc.append(f" {','.join(tags)}")
+        return ' '.join(doc)
+    
+    def to_kw_tags(self) -> list[str]:
+        # 将对象的标签转换为关键词数据库标签格式的列表
+        tags = []
+        if "男" in self.gender:
+            tags.extend(["男", "男性", "男生", "男的"])
+        if "女" in self.gender:
+            tags.extend(["女", "女性", "女生", "女的"])
+        return tags
+
     def comment(self, comment: Dict[str, str]):
         # 添加总结评价
         self.comments.update(comment)

@@ -216,13 +216,13 @@ def get_instance() -> VectorDB:
 
 if __name__ == "__main__":
     import os
-    
-    from logger import init as init_logger
-    init_logger(log_dir="logs", log_file="test", log_level=logging.INFO, console_log_level=logging.DEBUG)
-    
+
     from config import init as init_config
     config_file = os.path.join(os.path.dirname(__file__), "../../configuration/test_conf.ini")
     init_config(config_file)
+        
+    from logger import init as init_logger
+    init_logger()
     
     init()
     vsdb = get_instance()
