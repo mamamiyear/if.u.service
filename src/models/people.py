@@ -82,10 +82,10 @@ class People:
             'introduction': self.introduction,
             'comments': self.comments,
             'cover': self.cover,
-        }
-    
-    def meta(self) -> Dict[str, str]:
-        # 返回对象的元数据信息
+        }       
+
+    def to_vs_meta(self) -> Dict[str, str]:
+        # 返回对象的向量数据库元数据信息
         meta = {
             'id': self.id,
             'name': self.name,
@@ -94,11 +94,11 @@ class People:
             'height': self.height,
             'marital_status': self.marital_status,
         }
-        logging.info(f"people meta: {meta}")
+        logging.info(f"people meta for vsdb: {meta}")
         return meta
 
-    def tonl(self) -> str:
-        # 将对象转换为文档格式的字符串
+    def to_vs_text(self) -> str:
+        # 将对象转换为向量数据库文档格式的字符串
         doc = []
         doc.append(f"姓名: {self.name}")
         doc.append(f"性别: {self.gender}")

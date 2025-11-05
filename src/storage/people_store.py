@@ -96,8 +96,8 @@ class PeopleStore:
             session.commit()
         
         # 2. 保存到向量数据库
-        people_metadata = people.meta()
-        people_document = people.tonl()
+        people_metadata = people.to_vs_meta()
+        people_document = people.to_vs_text()
         logging.info(f"people: {people}")
         logging.info(f"people_metadata: {people_metadata}")
         logging.info(f"people_document: {people_document}")
@@ -148,7 +148,7 @@ class PeopleStore:
         with self.session_maker() as session:
             people_orms = session.query(PeopleORM).filter_by(**conds).filter(
                 PeopleORM.deleted_at.is_(None)
-            ).limit(limit).offset(offset).all()
+            ).limit(limit).offset(offset).all().sort(key=lambda orm: orm.created_at, reverse=True)
         return [people_orm.to_people() for people_orm in people_orms]
     
     def search(self, search: str, metadatas: dict, ids: list[str] = None, top_k: int = 5) -> list[People]:
@@ -174,7 +174,8 @@ class PeopleStore:
         with self.session_maker() as session:
             people_orms = session.query(PeopleORM).filter(PeopleORM.id.in_(people_id_list)).filter(
                 PeopleORM.deleted_at.is_(None)
-            ).all()
+            ).all().sort(key=lambda orm: orm.created_at, reverse=True)
+        
         # 根据 people_id_list 的顺序对查询结果进行排序
         order_map = {pid: idx for idx, pid in enumerate(people_id_list)}
         people_orms.sort(key=lambda orm: order_map.get(orm.id, len(order_map)))
