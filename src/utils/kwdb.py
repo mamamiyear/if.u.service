@@ -6,7 +6,7 @@ import logging
 import os
 import datetime
 import jieba
-from typing import List, Dict, Any, Protocol
+from typing import List, Dict, Any, Protocol, Tuple
 from whoosh import index
 from whoosh.analysis import Token, Tokenizer
 from whoosh.fields import KEYWORD, Schema, TEXT, ID, DATETIME
@@ -41,7 +41,7 @@ class KeywordDB(Protocol):
         """
         ...
 
-    def search(self, query: str, tags: List[str] = None) -> List[str]:
+    def search(self, query: str, tags: List[str] = None) -> List[Tuple[int, str]]:
         """
         搜索文档
         
@@ -50,7 +50,7 @@ class KeywordDB(Protocol):
             tags: 要搜索的标签列表
         
         Returns:
-            List[str]: 包含排名和文档ID的元组列表
+            List[Tuple[int, str]]: 包含排名和文档ID的元组列表
         """
         ...
     
@@ -163,7 +163,7 @@ class WhooshDB:
         with self.index.searcher() as searcher:
             return searcher.document(id=id)
 
-    def search(self, query: str, tags: List[str] = None) -> List[str]:
+    def search(self, query: str, tags: List[str] = None) -> List[Tuple[int, str]]:
         """
         搜索文档
         
@@ -172,7 +172,7 @@ class WhooshDB:
             tags: 要搜索的标签列表
         
         Returns:
-            List[str]: 包含排名和文档ID的元组列表
+            List[Tuple[int, str]]: 包含排名和文档ID的元组列表
         """
         kw_results = []
         query_parser = MultifieldParser(["description", "tags"], schema=self.index.schema)
@@ -237,3 +237,5 @@ if __name__ == "__main__":
     print(results)
     for doc in docs:
         kwdb.delete(doc["id"])
+    ret = kwdb.get("no-existed")
+    print(ret)

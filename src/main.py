@@ -6,7 +6,7 @@ import argparse
 from venv import logger
 import uvicorn
 from app.api import api
-from utils import obs, ocr, vsdb, logger, config
+from utils import obs, ocr, vsdb, logger, config, kwdb
 from storage import people_store
 
 # 主函数
@@ -20,6 +20,7 @@ def main():
     obs.init()
     ocr.init()
     vsdb.init()
+    kwdb.init()
     people_store.init()
     conf = config.get_instance()
     host = conf.get('web_service', 'server_host', fallback='127.0.0.1')

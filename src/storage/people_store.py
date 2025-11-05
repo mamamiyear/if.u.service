@@ -163,9 +163,13 @@ class PeopleStore:
         if conds is None:
             conds = {}
         with self.session_maker() as session:
+            # 查出结果按创建时间倒序排序
             people_orms = session.query(PeopleORM).filter_by(**conds).filter(
                 PeopleORM.deleted_at.is_(None)
-            ).limit(limit).offset(offset).all().sort(key=lambda orm: orm.created_at, reverse=True)
+            ).limit(limit).offset(offset).all()
+        logging.info(f"queried people_orms: {people_orms}")
+        people_orms.sort(key=lambda orm: orm.created_at, reverse=True)
+        logging.info(f"sorted people_orms: {people_orms}")
         return [people_orm.to_people() for people_orm in people_orms]
     
     def search(self, search: str, metadatas: dict, ids: list[str] = None, top_k: int = 5) -> list[People]:
@@ -195,7 +199,7 @@ class PeopleStore:
         results = self.kwdb.search(query=search)
         logging.info(f"results: {results}")
         for result in results:
-            people_id = result.get('id', '')
+            people_id = result[1]
             if not people_id:
                 continue
             people_id_list.append(people_id)
@@ -205,7 +209,10 @@ class PeopleStore:
         with self.session_maker() as session:
             people_orms = session.query(PeopleORM).filter(PeopleORM.id.in_(people_id_list)).filter(
                 PeopleORM.deleted_at.is_(None)
-            ).all().sort(key=lambda orm: orm.created_at, reverse=True)
+            ).all()
+        logging.info(f"people_orms: {people_orms}")
+        if not people_orms:
+            return peoples
         
         # 根据 people_id_list 的顺序对查询结果进行排序
         order_map = {pid: idx for idx, pid in enumerate(people_id_list)}
@@ -243,6 +250,19 @@ class PeopleStore:
 def init():
     global people_store
     people_store = PeopleStore()
+    # mysql -> kwdb
+    peoples = people_store.query()
+    for people in peoples:
+        kw_doc = people_store.kwdb.get(people.id)
+        if kw_doc:
+            continue
+        
+        doc = {
+            "id": people.id,
+            "description": people.to_kw_text(),
+            "tags": people.to_kw_tags(),
+        }
+        people_store.kwdb.upsert(doc)
 
 def get_instance() -> PeopleStore:
     return people_store
