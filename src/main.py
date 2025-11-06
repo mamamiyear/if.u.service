@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 # created by mmmy on 2025-09-27
+import asyncio
 import logging
 import os
 import argparse
@@ -26,6 +27,8 @@ def main():
     host = conf.get('web_service', 'server_host', fallback='127.0.0.1')
     port = conf.getint('web_service', 'server_port', fallback=8099)
     uvicorn.run(api, host=host, port=port)
+    loop = asyncio.get_event_loop()
+    loop.run_forever()
 
 if __name__ == "__main__":
     main()

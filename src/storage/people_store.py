@@ -1,5 +1,8 @@
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
 import json
 import logging
+import threading
 import uuid
 from datetime import datetime
 
@@ -99,6 +102,23 @@ class PeopleStore:
             session.commit()
         
         # 2. 保存到向量数据库
+        self.save_to_vsdb(people)
+        
+        # 3. 保存到关键词数据库
+        self.save_to_kwdb(people)
+        
+        # 4. 保存到 OBS 存储
+        self.save_to_obs(people)
+        
+        return people.id
+    
+    def save_to_vsdb(self, people: People) -> str:
+        """
+        保存人物到向量数据库
+        
+        :param people: 人物对象
+        :return: 人物ID
+        """
         people_metadata = people.to_vs_meta()
         people_document = people.to_vs_text()
         logging.info(f"people: {people}")
@@ -106,10 +126,17 @@ class PeopleStore:
         logging.info(f"people_document: {people_document}")
         results = self.vsdb.insert(metadatas=[people_metadata], documents=[people_document], ids=[people.id])
         logging.info(f"results: {results}")
-        if len(results) == 0:
+        if len(results) == 0 or results[0] != people.id:
             raise Exception("insert failed")
+        return results[0]
+    
+    def save_to_kwdb(self, people: People) -> str:
+        """
+        保存人物到关键词数据库
         
-        # 3. 保存到关键词数据库
+        :param people: 人物对象
+        :return: 人物ID
+        """
         people_kw_text = people.to_kw_text()
         people_kw_tags = people.to_kw_tags()
         kwdb_doc = {
@@ -122,15 +149,21 @@ class PeopleStore:
         logging.info(f"doc_id: {doc_id}")
         if doc_id != people.id:
             raise Exception("upsert failed")
+        return doc_id
+
+    def save_to_obs(self, people: People) -> str:
+        """
+        保存人物到 OBS 存储
         
-        # 4. 保存到 OBS 存储
+        :param people: 人物对象
+        :return: OBS 存储 URL
+        """
         people_dict = people.to_dict()
         people_json = json.dumps(people_dict, ensure_ascii=False)
         obs_url = self.obs.Put(f"peoples/{people.id}/detail.json", people_json.encode('utf-8'))
         logging.info(f"obs_url: {obs_url}")
-        
-        return people.id
-    
+        return obs_url
+
     def update(self, people: People) -> None:
         raise Exception("update not implemented")
         return None
@@ -164,12 +197,14 @@ class PeopleStore:
             conds = {}
         with self.session_maker() as session:
             # 查出结果按创建时间倒序排序
-            people_orms = session.query(PeopleORM).filter_by(**conds).filter(
-                PeopleORM.deleted_at.is_(None)
-            ).limit(limit).offset(offset).all()
-        logging.info(f"queried people_orms: {people_orms}")
+            sel = session.query(PeopleORM).filter_by(**conds).filter(PeopleORM.deleted_at.is_(None))
+            if limit:
+                sel = sel.limit(limit)
+            if offset:
+                sel = sel.offset(offset)
+            people_orms = sel.all()
         people_orms.sort(key=lambda orm: orm.created_at, reverse=True)
-        logging.info(f"sorted people_orms: {people_orms}")
+        logging.info(f"query sorted people_orms: {people_orms}")
         return [people_orm.to_people() for people_orm in people_orms]
     
     def search(self, search: str, metadatas: dict, ids: list[str] = None, top_k: int = 5) -> list[People]:
@@ -247,22 +282,44 @@ class PeopleStore:
             self.obs.Del(key)
             logging.info(f"文件 {key} 删除 OBS 成功")
 
+def dts():
+    """
+    将关系型数据库中的人物数据转换为关键词数据库文档格式
+    """
+    global people_store
+    
+    peoples = people_store.query()
+    
+    for people in peoples:
+        logging.info(f"people: {people.to_dict()}")
+        # 在 vsdb 查询 people id 是否存在
+        results = people_store.vsdb.get(ids=[people.id])
+        logging.info(f"results: {results}")
+        if not results:
+            people_store.save_to_vsdb(people)
+            logging.info(f"人物 {people.id} 已插入向量数据库")
+        else:
+            logging.info(f"人物 {people.id} 已存在向量数据库")
+
+        # 在 kwdb 查询 people id 是否存在
+        results = people_store.kwdb.get(id=people.id)
+        if not results:
+            people_store.save_to_kwdb(people)
+            logging.info(f"人物 {people.id} 已插入关键词数据库")
+        else:
+            logging.info(f"人物 {people.id} 已存在关键词数据库")
+
 def init():
     global people_store
     people_store = PeopleStore()
-    # mysql -> kwdb
-    peoples = people_store.query()
-    for people in peoples:
-        kw_doc = people_store.kwdb.get(people.id)
-        if kw_doc:
-            continue
-        
-        doc = {
-            "id": people.id,
-            "description": people.to_kw_text(),
-            "tags": people.to_kw_tags(),
-        }
-        people_store.kwdb.upsert(doc)
+    # 创建并启动后台线程运行异步任务
+    executor = ThreadPoolExecutor()
+    def dts_done(task):
+        logging.info("人物数据转换后台任务完成")
+    task = executor.submit(dts) 
+    task.add_done_callback(dts_done)
+    # executor.shutdown(wait=True)
+    logging.info("人物数据转换后台任务启动")
 
 def get_instance() -> PeopleStore:
     return people_store

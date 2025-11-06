@@ -11,7 +11,7 @@ from whoosh import index
 from whoosh.analysis import Token, Tokenizer
 from whoosh.fields import KEYWORD, Schema, TEXT, ID, DATETIME
 from whoosh.scoring import BM25F
-from whoosh.qparser import MultifieldParser, QueryParser
+from whoosh.qparser import MultifieldParser
 from .config import get_instance as get_config
 
 

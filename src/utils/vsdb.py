@@ -37,7 +37,7 @@ class VectorDB(Protocol):
         """
         ...
 
-    def query(self, metadatas: dict, ids: list[str], top_k: int = 5) -> list[dict]:
+    def query(self, metadatas: dict = {}, ids: list[str] = None, top_k: int = 5) -> list[dict]:
         """
         查询向量数据库
         
@@ -50,6 +50,9 @@ class VectorDB(Protocol):
         """
         ...
     
+    def get(self, ids: list[str] = None) -> list[dict]:
+        ...
+
     def search(self, document: str, metadatas: dict, ids: list[str] = None, top_k: int = 5) -> list[dict]:
         """
         搜索向量数据库
@@ -138,7 +141,7 @@ class ChromaDB:
             print(f"Error deleting documents: {e}")
             return False
     
-    def query(self, metadatas: dict, ids: list[str] = None, top_k: int = 5) -> list[dict]:
+    def query(self, metadatas: dict= {}, ids: list[str] = None, top_k: int = 5) -> list[dict]:
         """
         查询向量数据库
         
@@ -150,6 +153,7 @@ class ChromaDB:
         Returns:
             list[dict]: 查询结果列表
         """
+        logging.info(f"query metadatas: {metadatas}, ids: {ids}, top_k: {top_k}")
         results = self.collection.query(
             query_embeddings=None,
             query_texts=None,
@@ -169,6 +173,19 @@ class ChromaDB:
             formatted_results.append(result)
         return formatted_results
     
+    def get(self, ids: list[str] = None) -> list[dict]:
+        results = self.collection.get(ids=ids, include=["documents", "metadatas"])
+        logging.info(f"results: {results}")
+        formatted_results = []
+        for i in range(len(results['ids'])):
+            result = {
+                'id': results['ids'][i],
+                'metadata': results['metadatas'][i] if results['metadatas'][i] else {},
+                'document': results['documents'][i] if results['documents'][i] else ''
+            }
+            formatted_results.append(result)
+        return formatted_results
+
     def search(self, document: str, metadatas: dict, ids: list[str] = None, top_k: int = 5) -> list[dict]:
         """
         搜索向量数据库
