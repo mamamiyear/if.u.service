@@ -1,8 +1,9 @@
 
 from typing import Protocol
 import uuid
-from sqlalchemy import Column, DateTime, String, create_engine, func, or_
+from sqlalchemy import Column, DateTime, String, create_engine, func
 from sqlalchemy.orm import declarative_base, sessionmaker
+from .config import get_instance as get_config
 
 SQLAlchemyBase = declarative_base()
 
@@ -57,6 +58,7 @@ class RelationalDB(Protocol):
 
 class SqlAlchemyDB():
     def __init__(self, dsn: str = None) -> None:
+        config = get_config()
         dsn = dsn if dsn else config.get("sqlalchemy", "database_dsn")
         self.sqldb_engine = create_engine(dsn)
         SQLAlchemyBase.metadata.create_all(self.sqldb_engine)
