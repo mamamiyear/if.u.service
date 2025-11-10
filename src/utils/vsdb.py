@@ -51,7 +51,7 @@ class VSDBBaseModel:
         ...
 
 class VectorDB(Protocol):
-
+    # >>>>>>> new methods >>>>>>>
     def insert(self, data: VSDBBaseModel) -> str:
         ...
     
@@ -64,10 +64,7 @@ class VectorDB(Protocol):
     def delete(self, data: VSDBBaseModel) -> str:
         ...
     
-    def get(self,
-            model:  type[VSDBBaseModel],
-            id: str,
-            ) -> VSDBBaseModel:
+    def get(self, model:  type[VSDBBaseModel], id: str, ) -> VSDBBaseModel:
         ...
     
     def query(self,
@@ -75,8 +72,20 @@ class VectorDB(Protocol):
               top_k: int = 10,
               **filters,
               ) -> list[VSDBBaseModel]:
+        """
+        查询向量数据库
+        
+        Args:
+            model: 模型类
+            top_k: 返回的文档数量
+            **filters: 查询过滤条件
+        
+        Returns:
+            list[VSDBBaseModel]: 包含文档字段的模型实例列表
+        """
         ...
 
+    # >>>>>>> old methods >>>>>>>
     def insert(self, metadatas: list[dict], documents: list[str], ids: list[str] = None) -> list[str]:
         """
         插入向量到数据库
@@ -399,9 +408,9 @@ if __name__ == "__main__":
         __collection__ = 'test'
         name: str = ''
         conf: str = ''
-        document: str = ''
-        metadata: dict = {}
-        distance: float = 0.0
+        _document: str = ''
+        _metadata: dict = {}
+        _distance: float = 0.0
         @override
         def __meta__(self) -> dict:
             fields = [field for field in self.__dict__ if not field.startswith('_')]
@@ -412,20 +421,20 @@ if __name__ == "__main__":
             return f"这个配置项的名字是: {self.name}; 配置的内容是: {self.conf}"
         @override
         def set_document(self, document: str):
-            self.document = document
+            self._document = document
         @override
         def set_metadata(self, metadata: dict):
-            self.metadata = metadata
+            self._metadata = metadata
         @override
         def set_distance(self, distance: float):
-            self.distance = distance
+            self._distance = distance
         def __str__(self) -> str:
             return f"TestModel(id={self.id}, name={self.name}, conf={self.conf}, document={self.document}, metadata={self.metadata}, distance={self.distance})"
     
     init(api_url = "https://ark.cn-beijing.volces.com/api/v3",
          api_key = "fff0b009-78a5-4d58-ad0e-a5ca284df7b5",
          endpoint = "ep-20250928142122-twlqb",
-         persist_directory = "./localstore/testdb")
+         persist_directory = "./demo_storage/vsdb")
     db = get_instance()
     
     test_data = TestModel(name='test', conf='test')

@@ -85,6 +85,12 @@ class WhooshIndex:
         writer.commit()
         return num
 
+    def get_by_id(self, doc_id: str) -> Optional[Dict[str, Any]]:
+        """按 id 获取文档"""
+        with self.ix.searcher() as searcher:
+            doc = searcher.document(id=str(doc_id))
+            return doc if doc else None
+
     # ---------------- 搜索 ----------------
     def search(
         self,
@@ -169,6 +175,10 @@ def example() -> None:
 
     for d in docs:
         idx.add_or_update(d)
+    
+    r0 = idx.get_by_id("1")
+    print("\n== 查询0：id=1 ==")
+    print(r0)
 
     # 查询 1：关键词
     r1 = idx.search("北京 数据工程师", page=1, page_size=5)

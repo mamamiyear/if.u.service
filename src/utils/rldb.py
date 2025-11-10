@@ -138,7 +138,7 @@ if __name__ == "__main__":
         __tablename__ = "test_model"
         name = Column(String(36), nullable=True)
         conf = Column(String(96), nullable=True)
-    init("sqlalchemy", dsn="sqlite:///./localstorage/test.db")
+    init("sqlalchemy", dsn="sqlite:///./demo_storage/rldb.db")
     db = get_instance()
     
     test_data = TestModel(name="test", conf="test.config")
