@@ -1,0 +1,10 @@
+[project]
+name = "service"
+version = "0.1"
+description = "This project is the web servcie sub-system for if.u projuect"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.118.3",
+    "uvicorn>=0.38.0",
+]
