@@ -4,21 +4,24 @@ from langchain_openai import ChatOpenAI
 from langchain.prompts import ChatPromptTemplate
 
 from models.people import People
+from utils.config import get_instance as get_config
 
 class BaseAgent:
-    def __init__(self):
+    def __init__(self, api_url: str = None, api_key: str = None, model_name: str = None):
+        config = get_config()
+        llm_api_url = api_url or config.get("ai", "llm_api_url")
+        llm_api_key = api_key or config.get("ai", "llm_api_key")
+        llm_model_name = model_name or config.get("ai", "llm_model_name")
         self.llm = ChatOpenAI(
-            openai_api_key="56d82040-85c7-4701-8f87-734985e27909",
-            openai_api_base="https://ark.cn-beijing.volces.com/api/v3",
-            # model_name="ep-20250722161445-n9lfq", # doubao-1.6-thinking
-            # model_name="ep-20251105144346-drw65", # doubao-1.6-normal
-            model_name="ep-20251111153955-6x2jl", # deepseek-v3.1
+            openai_api_key=llm_api_key,
+            openai_api_base=llm_api_url,
+            model_name=llm_model_name,
         )
     pass
 
 class ExtractPeopleAgent(BaseAgent):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, api_url: str = None, api_key: str = None, model_name: str = None):
+        super().__init__(api_url, api_key, model_name)
         self.prompt = ChatPromptTemplate.from_messages([
             (
                 "system",
