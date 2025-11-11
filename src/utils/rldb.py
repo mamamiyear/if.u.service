@@ -49,8 +49,8 @@ class RelationalDB(Protocol):
     def query(self,
              model: type[RLDBBaseModel],
              include_deleted: bool = False,
-             limit: int = 10,
-             offset: int = 0,
+             limit: int = None,
+             offset: int = None,
              **filters
              ) -> list[RLDBBaseModel]:
         ...
@@ -102,8 +102,8 @@ class SqlAlchemyDB():
 
     def query(self,
              model: type[RLDBBaseModel],
-             limit: int = 10,
-             offset: int = 0,
+             limit: int = None,
+             offset: int = None,
              **filters
              ) -> list[RLDBBaseModel]:
         results: list[RLDBBaseModel] = []

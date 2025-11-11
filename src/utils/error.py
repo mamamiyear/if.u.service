@@ -13,11 +13,11 @@ class error(Protocol):
         return f"{self.__class__.__name__}({self._error_code}, {self._error_info})"
     
     @property
-    def error_code(self) -> int:
+    def code(self) -> int:
         return self._error_code
     @property
-    def error_info(self) -> str:
+    def info(self) -> str:
         return self._error_info
     @property
-    def is_success(self) -> bool:
+    def success(self) -> bool:
         return self._error_code == 0

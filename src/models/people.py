@@ -1,8 +1,11 @@
 # -*- coding: utf-8 -*-
 # created by mmmy on 2025-09-30
 
-import logging
 from typing import Dict
+
+from sqlalchemy import Column, Integer, String, Text, DateTime, func
+
+from utils.rldb import RLDBBaseModel
 
 class PeopleRLDBModel(RLDBBaseModel):
     __tablename__ = 'peoples'
@@ -20,22 +23,7 @@ class PeopleRLDBModel(RLDBBaseModel):
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
     deleted_at = Column(DateTime(timezone=True), nullable=True, index=True)
-    
-    def to_people(self) -> People:
-        # 将关系数据库模型转换为对象
-        return People(
-            id=self.id,
-            name=self.name,
-            contact=self.contact,
-            gender=self.gender,
-            age=self.age,
-            height=self.height,
-            marital_status=self.marital_status,
-            match_requirement=self.match_requirement,
-            introduction=self.introduction,
-            comments=self.comments,
-            cover=self.cover,
-        )
+
 
 class People:
     # 数据库 ID
@@ -81,6 +69,52 @@ class People:
                 f"age={self.age}, height={self.height}, marital_status={self.marital_status}, "
                 f"match_requirement={self.match_requirement}, introduction={self.introduction}, "
                 f"comments={self.comments}, cover={self.cover})")
+
+    @classmethod
+    def from_dict(cls, data: dict):
+        if 'created_at' in data:
+            # 移除 created_at 字段，避免类型错误
+            del data['created_at']
+        if 'updated_at' in data:
+            # 移除 updated_at 字段，避免类型错误
+            del data['updated_at']
+        if 'deleted_at' in data:
+            # 移除 deleted_at 字段，避免类型错误
+            del data['deleted_at']
+        return cls(**data)
+
+    @classmethod
+    def from_rldb_model(cls, data: PeopleRLDBModel):
+        # 将关系数据库模型转换为对象
+        return cls(
+            id=data.id,
+            name=data.name,
+            contact=data.contact,
+            gender=data.gender,
+            age=data.age,
+            height=data.height,
+            marital_status=data.marital_status,
+            match_requirement=data.match_requirement,
+            introduction=data.introduction,
+            comments=data.comments,
+            cover=data.cover,
+        )
+
+    def to_dict(self) -> dict:
+        # 将对象转换为字典格式
+        return {
+            'id': self.id,
+            'name': self.name,
+            'contact': self.contact,
+            'gender': self.gender,
+            'age': self.age,
+            'height': self.height,
+            'marital_status': self.marital_status,
+            'match_requirement': self.match_requirement,
+            'introduction': self.introduction,
+            'comments': self.comments,
+            'cover': self.cover,
+        }      
 
     def to_rldb_model(self) -> PeopleRLDBModel:
         # 将对象转换为关系数据库模型
