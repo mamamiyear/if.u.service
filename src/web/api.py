@@ -88,6 +88,28 @@ async def post_people(post_people_request: PostPeopleRequest):
         return BaseResponse(error_code=error.code, error_info=error.info)
     return BaseResponse(error_code=0, error_info="success", data=people.id)
 
+@api.put("/people/{people_id}")
+async def update_people(people_id: str, post_people_request: PostPeopleRequest):
+    logging.debug(f"post_people_request: {post_people_request}")
+    people = People.from_dict(post_people_request.people)
+    people.id = people_id
+    service = get_people_service()
+    res, error = service.get(people_id)
+    if not error.success or not res:
+        return BaseResponse(error_code=error.code, error_info=error.info)
+    _, error = service.save(people)
+    if not error.success:
+        return BaseResponse(error_code=error.code, error_info=error.info)
+    return BaseResponse(error_code=0, error_info="success")
+
+@api.delete("/people/{people_id}")
+async def delete_people(people_id: str):
+    service = get_people_service()
+    error = service.delete(people_id)
+    if not error.success:
+        return BaseResponse(error_code=error.code, error_info=error.info)
+    return BaseResponse(error_code=0, error_info="success")
+
 class GetPeopleRequest(BaseModel):
     query: Optional[str] = None
     conds: Optional[dict] = None
@@ -128,10 +150,3 @@ async def get_peoples(
     peoples = [people.to_dict() for people in results]
     return BaseResponse(error_code=0, error_info="success", data=peoples)
 
-@api.delete("/people/{people_id}")
-async def delete_people(people_id: str):
-    service = get_people_service()
-    error = service.delete(people_id)
-    if not error.success:
-        return BaseResponse(error_code=error.code, error_info=error.info)
-    return BaseResponse(error_code=0, error_info="success")

@@ -40,6 +40,18 @@ class PeopleService:
         self.rldb.delete(people_orm)
         return error(0, "")
     
+    def get(self, people_id: str) -> (People, error):
+        """
+        从数据库获取人物
+        
+        :param people_id: 人物ID
+        :return: 人物对象
+        """
+        people_orm = self.rldb.get(PeopleRLDBModel, people_id)
+        if not people_orm:
+            return None, error(1, f"people {people_id} not found")
+        return People.from_rldb_model(people_orm), error(0, "")
+    
     def list(self, conds: dict = {}, limit: int = 10, offset: int = 0) -> (list[People], error):
         """
         从数据库列出人物
