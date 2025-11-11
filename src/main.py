@@ -3,8 +3,10 @@
 import os
 import argparse
 import uvicorn
+from services import people as people_service
+from utils import config, logger, rldb
+
 from web.api import api
-from utils import config, logger
 
 # 主函数
 def main():
@@ -15,6 +17,10 @@ def main():
     
     config.init(args.config)
     logger.init()
+    
+    rldb.init()
+    
+    people_service.init()
     
     conf = config.get_instance()
 
