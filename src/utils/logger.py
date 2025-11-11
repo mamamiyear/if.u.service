@@ -36,12 +36,12 @@ class ColoredConsoleHandler(logging.StreamHandler):
         self.stream.write(f"{color}{message}{Colors.RESET}\n")
         self.flush()
 
-def init():
+def init(log_dir: str = None, log_file: str = None, log_level: int = None, console_log_level: int = None):
     config = get_config()
-    log_dir = config.get("log", "log_dir", fallback="logs")
-    log_file = config.get("log", "log_file", fallback="if.u.service")
-    log_level = config.get("log", "log_level", fallback=logging.INFO)
-    console_log_level = config.get("log", "console_log_level", fallback=logging.DEBUG)
+    log_dir = log_dir or config.get("log", "log_dir", fallback="logs")
+    log_file = log_file or config.get("log", "log_file", fallback="if.u.service")
+    log_level = log_level or config.get("log", "log_level", fallback=logging.INFO)
+    console_log_level = console_log_level or config.get("log", "console_log_level", fallback=logging.DEBUG)
 
     # 创建logs目录（如果不存在）
     if not os.path.exists(log_dir):

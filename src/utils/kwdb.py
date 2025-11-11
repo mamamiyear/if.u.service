@@ -12,8 +12,10 @@ from typing import List, Dict, Any, Protocol, Tuple
 from whoosh import index
 from whoosh.analysis import Token, Tokenizer
 from whoosh.fields import Schema, KEYWORD, TEXT, ID, DATETIME
+from whoosh.query import Or
 from whoosh.scoring import BM25F
 from whoosh.qparser import MultifieldParser, QueryParser
+from whoosh.sorting import FieldFacet
 from .config import get_instance as get_config
 
 
@@ -24,7 +26,6 @@ class KWDBBaseModel:
     updated_at: datetime.datetime
     
     def __init__(self) -> None:
-        self.id = str(uuid.uuid4().hex)
         self.created_at = datetime.datetime.now()
         self.updated_at = datetime.datetime.now()
     
@@ -127,21 +128,18 @@ class KeywordDB(Protocol):
         """
         ...
     
-    def query(self,
-              model:  type[KWDBBaseModel],
-              top_k: int = 10,
-              **filters,
-              ) -> list[KWDBBaseModel]:
+    def query(self, model: type[KWDBBaseModel], query: str = "*", tags: List[str] = None, limit: int = None) -> list[KWDBBaseModel]:
         """
         查询文档
         
         Args:
-            model: 模型类
-            top_k: 返回的文档数量
-            **filters: 查询过滤条件
+            model: 文档模型类
+            query: 搜索查询字符串
+            tags: 要搜索的标签列表
+            limit: 要返回的文档数量
         
         Returns:
-            list[KWDBBaseModel]: 包含文档字段的模型实例列表
+            List[KWDBBaseModel]: 包含文档字段的模型实例列表
         """
         ...
 
@@ -190,7 +188,7 @@ class WhooshDB:
                     token.endchar = -1
                 yield token
 
-    def _get_index(self, cls: type[KWDBBaseModel]) -> index.Index:
+    def _get_index(self, cls: type[KWDBBaseModel]):
         """
         获取索引
         """
@@ -211,6 +209,7 @@ class WhooshDB:
         Args:
             data: 包含文档字段的模型实例
         
+        Args:
         Returns:
             str: 插入的文档ID
         """
@@ -234,8 +233,8 @@ class WhooshDB:
         """
         插入或更新文档
         """
-        index = self._get_index(data)
-        writer = index.writer()
+        ix = self._get_index(data.__class__)
+        writer = ix.writer()
         data.created_at = datetime.datetime.now()
         data.updated_at = datetime.datetime.now()
         docs = data.__docs__()
@@ -256,8 +255,8 @@ class WhooshDB:
         Returns:
             bool: 是否删除成功
         """
-        index = self._get_index(data.__class__)
-        writer = index.writer()
+        ix = self._get_index(data.__class__)
+        writer = ix.writer()
         writer.delete_by_term("id", data.id)
         writer.commit()
         return True
@@ -273,8 +272,8 @@ class WhooshDB:
         Returns:
             KWDBBaseModel: 包含文档字段的模型实例
         """
-        index = self._get_index(model)
-        with index.searcher() as searcher:
+        ix = self._get_index(model)
+        with ix.searcher() as searcher:
             res = searcher.document(id=id)
             print(f"Get document {id}: {res}")
             if res:
@@ -288,7 +287,7 @@ class WhooshDB:
                 logging.debug(f"Document {id} not found")
                 return None
 
-    def query(self, model: type[KWDBBaseModel], query: str, tags: List[str] = None) -> List[KWDBBaseModel]:
+    def query(self, model: type[KWDBBaseModel], query: str = "*", tags: List[str] = None, limit: int = None) -> List[KWDBBaseModel]:
         """
         查询文档
         
@@ -296,30 +295,34 @@ class WhooshDB:
             model: 文档模型类
             query: 搜索查询字符串
             tags: 要搜索的标签列表
+            limit: 要返回的文档数量
         
         Returns:
             List[KWDBBaseModel]: 包含文档字段的模型实例列表
         """
         kw_results = []
-        query_parser = QueryParser("content", schema=self.schema)
-        query = f"content:({query})"
-        query = query_parser.parse(query)
-        with self._get_index(model).searcher(weighting=BM25F()) as searcher:
-            results = searcher.search(query)
-            logging.debug(f"Search query: {query}, results: {results}")
+        ix = self._get_index(model)
+        with ix.searcher(weighting=BM25F()) as searcher:
+            # 构造 content 查询
+            content_query = QueryParser("content", ix.schema).parse(query)
+            if tags:
+                # 构造 tags 查询，多个 tag 取并集
+                tag_queries = [QueryParser("tags", ix.schema).parse(t) for t in tags]
+                tags_query = Or(tag_queries)
+                # 合并 content 与 tags 查询
+                final_query = content_query & tags_query
+            else:
+                final_query = content_query
+            created_facet = FieldFacet("created_at", reverse=True)
+            results = searcher.search(final_query, sortedby=created_facet, limit=limit)
+            logging.debug(f"Search query: {final_query}, tags: {tags}, results: {results}")
             for res in results:
                 data = model()
                 data.id = res["id"]
                 data.created_at = res["created_at"]
                 data.updated_at = res["updated_at"]
                 kw_results.append(data)
-            return kw_results
-        
-        """
-        列出所有文档ID
-        """
-        with self.index.searcher() as searcher:
-            return [hit['id'] for hit in searcher.documents()]
+        return kw_results
 
 _kwdb_instance: KeywordDB = None
 
@@ -332,14 +335,18 @@ def get_instance() -> KeywordDB:
     return _kwdb_instance
 
 if __name__ == "__main__":
+    from .logger import init as init_logger
+
+    init_logger(log_dir="./demo_storage/logs", log_file="demo.kwdb", log_level=logging.DEBUG, console_log_level=logging.DEBUG)
 
     class TestModel(KWDBBaseModel):
         __indexname__ = "test_model"
         name: str = ''
         conf: str = ''
         
-        def __init__(self, name: str = "", conf: str = "", tags: List[str] = []):
+        def __init__(self, id: str = None, name: str = "", conf: str = "", tags: List[str] = []):
             super().__init__()
+            self.id = id or uuid.uuid4().hex
             self.name = name
             self.conf = conf
             self._tags = tags
@@ -361,16 +368,17 @@ if __name__ == "__main__":
 
     db = WhooshDB(data_dir="./demo_storage/kwdb")
     test_data = TestModel(name="测试配置文件", conf="我是一个测试的配置文件", tags=["测试", "配置"])
-    print(f"test_data: {test_data}")
+    prod_data = TestModel(name="生产配置文件", conf="我是一个生产的配置文件", tags=["生产", "配置"])
+    print(test_data)
+    print(prod_data)
     test_data_id = db.upsert(test_data)
-    test_data_id = test_data.id
-    print(f"test_data_id: {test_data_id}")
-    
-    test_data = db.get(TestModel, test_data_id)
+    prod_data_id = db.upsert(prod_data)
+
+    test_data = db.get(TestModel, test_data.id)
     print(test_data)
     
-    test_results = db.query(TestModel, "测试配置文件")
-    for test_data in test_results:
-        print(test_data)
-        ret = db.delete(test_data)
-        print(f"Delete test_data {test_data.id} success: {ret}")
+    results = db.query(TestModel, "*")
+    for res in results:
+        print(res)
+        ret = db.delete(res)
+        print(f"Delete res {res.id} success: {ret}")

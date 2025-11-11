@@ -2,7 +2,89 @@
 # created by mmmy on 2025-09-30
 
 import logging
-from typing import Dict
+from typing import Dict, List
+
+from overrides import override
+
+from utils.kwdb import KWDBBaseModel
+from utils.rldb import RLDBBaseModel
+from utils.vsdb import VSDBBaseModel
+
+class PeopleRLDBModel(RLDBBaseModel):
+    __tablename__ = 'peoples'
+    id = Column(String(36), primary_key=True)
+    name = Column(String(255), index=True)
+    contact = Column(String(255), index=True)
+    gender = Column(String(10))
+    age = Column(Integer)
+    height = Column(Integer)
+    marital_status = Column(String(20))
+    match_requirement = Column(Text)
+    introduction = Column(Text)
+    comments = Column(Text)
+    cover = Column(String(255), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+    deleted_at = Column(DateTime(timezone=True), nullable=True, index=True)
+    pass
+
+class PeopleVSDBModel(VSDBBaseModel):
+    __collection__ = 'peoples'
+    name: str
+    gender: str
+    age: int
+    height: int
+    marital_status: str
+    document: str
+    _distance: float = None
+    
+    @override
+    def __meta__(self) -> dict:
+        return {
+            'id': self.id,
+            'name': self.name,
+            'gender': self.gender,
+            'age': self.age,
+            'height': self.height,
+            'marital_status': self.marital_status,
+            'created_at': self.created_at,
+            'updaate_at': self.updated_at,
+        }
+
+    @override
+    def __docs__(self) -> str:
+        return self.document
+
+    @override
+    def set_document(self, document: str):
+        self.document = document
+    
+    @override
+    def set_metadata(self, metadata: dict):
+        self.name = metadata.get('name', '')
+        self.gender = metadata.get('gender', '')
+        self.age = metadata.get('age', 0)
+        self.height = metadata.get('height', 0)
+        self.marital_status = metadata.get('marital_status', '')
+    
+    @override
+    def set_distance(self, distance: float):
+        self._distance = distance
+
+
+class PeopleKWDBModel(KWDBBaseModel):
+    __indexname__ = 'peoples'
+    document: str
+    tag_list: List[str]
+
+    @override
+    def content(self) -> str:
+        return self.document
+
+    @override
+    def tags(self) -> List[str]:
+        return self.tag_list
+
 
 
 class People:
@@ -110,15 +192,15 @@ class People:
             doc.append(f"婚姻状况: {self.marital_status}")
         if self.match_requirement:
             doc.append(f"择偶要求: {self.match_requirement}")
+        result = ', '.join(doc)
+        result += '。个人介绍: '
+        doc = []
         if self.introduction:
-            doc.append("个人介绍:")
             for key, value in self.introduction.items():
-                doc.append(f" - {key}: {value}")
-        if self.comments:
-            doc.append("总结评价:")
-            for key, value in self.comments.items():
-                doc.append(f" - {key}: {value}")
-        return '\n'.join(doc)
+                doc.append(f"**{key}: {value}**")
+        result += ', '.join(doc)
+        result += '。'
+        return result
 
     def to_kw_text(self) -> str:
         # 将对象转换为关键词数据库文档格式的字符串
@@ -150,6 +232,58 @@ class People:
             tags.extend(["女", "女性", "女生", "女的"])
         return tags
 
+    def to_rl_model(self) -> PeopleRLDBModel:
+        # 将对象转换为关系数据库模型
+        return PeopleRLDBModel(
+            id=self.id,
+            name=self.name,
+            contact=self.contact,
+            gender=self.gender,
+            age=self.age,
+            height=self.height,
+            marital_status=self.marital_status,
+            match_requirement=self.match_requirement,
+            introduction=self.introduction,
+            comments=self.comments,
+            cover=self.cover,
+        )
+    
+    def from_rl_model(self, model: PeopleRLDBModel):
+        # 从关系型数据库模型转换为对象
+        self.id = model.id
+        self.name = model.name
+        self.contact = model.contact
+        self.gender = model.gender
+        self.age = model.age
+        self.height = model.height
+        self.marital_status = model.marital_status
+        self.match_requirement = model.match_requirement
+        self.introduction = model.introduction
+        self.comments = model.comments
+        self.cover = model.cover
+
+    def to_vs_model(self) -> PeopleVSDBModel:
+        # 将对象转换为向量数据库模型
+        return PeopleVSDBModel(
+            id=self.id,
+            name=self.name,
+            gender=self.gender,
+            age=self.age,
+            height=self.height,
+            marital_status=self.marital_status,
+            document=self.to_vs_text(),
+        )
+
+    def to_kw_model(self) -> PeopleKWDBModel:
+        # 将对象转换为关键词数据库模型
+        return PeopleKWDBModel(
+            id=self.id,
+            name=self.name,
+            document=self.to_kw_text(),
+            tag_list=self.to_kw_tags(),
+        )
+
     def comment(self, comment: Dict[str, str]):
         # 添加总结评价
         self.comments.update(comment)
+
