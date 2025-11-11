@@ -10,7 +10,9 @@ class BaseAgent:
         self.llm = ChatOpenAI(
             openai_api_key="56d82040-85c7-4701-8f87-734985e27909",
             openai_api_base="https://ark.cn-beijing.volces.com/api/v3",
-            model_name="ep-20250722161445-n9lfq"
+            # model_name="ep-20250722161445-n9lfq", # doubao-1.6-thinking
+            # model_name="ep-20251105144346-drw65", # doubao-1.6-normal
+            model_name="ep-20251111153955-6x2jl", # deepseek-v3.1
         )
     pass
 
