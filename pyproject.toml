@@ -10,6 +10,7 @@ dependencies = [
     "fastapi>=0.118.3",
     "langchain==0.3.27",
     "langchain-openai==0.3.35",
+    "python-multipart>=0.0.20",
     "qiniu>=7.17.0",
     "sqlalchemy>=2.0.44",
     "uvicorn>=0.38.0",

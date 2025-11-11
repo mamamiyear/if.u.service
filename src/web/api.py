@@ -1,10 +1,14 @@
+import os
+import uuid
 import logging
 from typing import Any, Optional
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, UploadFile, File, Query
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from services.people import get_instance as get_people_service
 from models.people import People
+from agents.extract_people_agent import ExtractPeopleAgent
+from utils import obs, ocr
 
 api = FastAPI(title="Single People Management and Searching", version="0.1")
 api.add_middleware(
@@ -23,6 +27,53 @@ class BaseResponse(BaseModel):
 @api.post("/ping")
 async def ping():
     return BaseResponse(error_code=0, error_info="success")
+
+class PostInputRequest(BaseModel):
+    text: str
+
+@api.post("/recognition/input")
+async def post_input(request: PostInputRequest):
+    people = extract_people(request.text)
+    resp = BaseResponse(error_code=0, error_info="success")
+    resp.data = people.to_dict()
+    return resp
+
+@api.post("/recognition/image")
+async def post_input_image(image: UploadFile = File(...)):
+    # 实现上传图片的处理
+    # 保存上传的图片文件
+    # 生成唯一的文件名
+    file_extension = os.path.splitext(image.filename)[1]
+    unique_filename = f"{uuid.uuid4()}{file_extension}"
+    
+    # 确保uploads目录存在
+    os.makedirs("uploads", exist_ok=True)
+    
+    # 保存文件到对象存储
+    file_path = f"uploads/{unique_filename}"
+    obs_util = obs.get_instance()
+    obs_util.Put(file_path, await image.read())
+    
+    # 获取对象存储外链
+    obs_url = obs_util.Link(file_path)
+    logging.info(f"obs_url: {obs_url}")
+    
+    # 调用OCR处理图片
+    ocr_util = ocr.get_instance()
+    ocr_result = ocr_util.recognize_image_text(obs_url)
+    logging.info(f"ocr_result: {ocr_result}")
+    
+    people = extract_people(ocr_result, obs_url)
+    resp = BaseResponse(error_code=0, error_info="success")
+    resp.data = people.to_dict()
+    return resp
+
+def extract_people(text: str, cover_link: str = None) -> People:
+    extra_agent = ExtractPeopleAgent()
+    people = extra_agent.extract_people_info(text)
+    people.cover = cover_link
+    logging.info(f"people: {people}")
+    return people
 
 class PostPeopleRequest(BaseModel):
     people: dict

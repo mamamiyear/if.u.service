@@ -4,7 +4,7 @@ import os
 import argparse
 import uvicorn
 from services import people as people_service
-from utils import config, logger, rldb
+from utils import config, logger, obs, ocr, rldb
 
 from web.api import api
 
@@ -19,6 +19,9 @@ def main():
     logger.init()
     
     rldb.init()
+    
+    ocr.init()
+    obs.init()
     
     people_service.init()
     
