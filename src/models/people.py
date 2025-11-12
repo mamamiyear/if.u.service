@@ -2,9 +2,11 @@
 # created by mmmy on 2025-09-30
 
 import json
+import logging
 from typing import Dict
 from sqlalchemy import Column, Integer, String, Text, DateTime, func
 from utils.rldb import RLDBBaseModel
+from utils.error import ErrorCode, error
 
 class PeopleRLDBModel(RLDBBaseModel):
     __tablename__ = 'peoples'
@@ -130,3 +132,19 @@ class People:
             comments=json.dumps(self.comments, ensure_ascii=False),
             cover=self.cover,
         )
+    
+    def validate(self) -> error:
+        err = error(ErrorCode.SUCCESS, "")
+        if not self.name:
+            logging.error("Name is required")
+            err = error(ErrorCode.MODEL_ERROR, "Name is required")
+        if not self.gender in ['男', '女', '未知']:
+            logging.error("Gender must be '男', '女', or '未知'")
+            err = error(ErrorCode.MODEL_ERROR, "Gender must be '男', '女', or '未知'")
+        if not isinstance(self.age, int) or self.age <= 0:
+            logging.error("Age must be an integer and greater than 0")
+            err = error(ErrorCode.MODEL_ERROR, "Age must be an integer and greater than 0")
+        if not isinstance(self.height, int) or self.height <= 0:
+            logging.error("Height must be an integer and greater than 0")
+            err = error(ErrorCode.MODEL_ERROR, "Height must be an integer and greater than 0")
+        return err

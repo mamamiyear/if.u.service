@@ -3,7 +3,7 @@
 
 import uuid
 from models.people import People, PeopleRLDBModel
-from utils.error import error
+from utils.error import ErrorCode, error
 from utils import rldb
 
 
@@ -25,7 +25,7 @@ class PeopleService:
         people_orm = people.to_rldb_model()
         self.rldb.upsert(people_orm)
         
-        return people.id, error(0, "")
+        return people.id, error(ErrorCode.SUCCESS, "")
     
     def delete(self, people_id: str) -> error:
         """
@@ -36,9 +36,9 @@ class PeopleService:
         """
         people_orm = self.rldb.get(PeopleRLDBModel, people_id)
         if not people_orm:
-            return error(1, f"people {people_id} not found")
+            return error(ErrorCode.RLDB_ERROR, f"people {people_id} not found")
         self.rldb.delete(people_orm)
-        return error(0, "")
+        return error(ErrorCode.SUCCESS, "")
     
     def get(self, people_id: str) -> (People, error):
         """
@@ -49,8 +49,8 @@ class PeopleService:
         """
         people_orm = self.rldb.get(PeopleRLDBModel, people_id)
         if not people_orm:
-            return None, error(1, f"people {people_id} not found")
-        return People.from_rldb_model(people_orm), error(0, "")
+            return None, error(ErrorCode.MODEL_ERROR, f"people {people_id} not found")
+        return People.from_rldb_model(people_orm), error(ErrorCode.SUCCESS, "")
     
     def list(self, conds: dict = {}, limit: int = 10, offset: int = 0) -> (list[People], error):
         """
@@ -64,7 +64,9 @@ class PeopleService:
         people_orms = self.rldb.query(PeopleRLDBModel, **conds)
         peoples = [People.from_rldb_model(people_orm) for people_orm in people_orms]
         
-        return peoples, error(0, "")
+        return peoples, error(ErrorCode.SUCCESS, "")
+
+
 
 people_service = None
 
