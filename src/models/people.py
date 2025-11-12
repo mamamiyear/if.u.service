@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
 # created by mmmy on 2025-09-30
 
+import json
 from typing import Dict
-
 from sqlalchemy import Column, Integer, String, Text, DateTime, func
-
 from utils.rldb import RLDBBaseModel
 
 class PeopleRLDBModel(RLDBBaseModel):
@@ -95,8 +94,8 @@ class People:
             height=data.height,
             marital_status=data.marital_status,
             match_requirement=data.match_requirement,
-            introduction=data.introduction,
-            comments=data.comments,
+            introduction=json.loads(data.introduction) if data.introduction else {},
+            comments=json.loads(data.comments) if data.comments else {},
             cover=data.cover,
         )
 
@@ -127,7 +126,7 @@ class People:
             height=self.height,
             marital_status=self.marital_status,
             match_requirement=self.match_requirement,
-            introduction=self.introduction,
-            comments=self.comments,
+            introduction=json.dumps(self.introduction, ensure_ascii=False),
+            comments=json.dumps(self.comments, ensure_ascii=False),
             cover=self.cover,
         )
