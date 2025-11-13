@@ -4,6 +4,7 @@
 import json
 import logging
 from typing import Dict
+from datetime import datetime
 from sqlalchemy import Column, Integer, String, Text, DateTime, func
 from utils.rldb import RLDBBaseModel
 from utils.error import ErrorCode, error
@@ -49,6 +50,8 @@ class People:
     comments: Dict[str, str]
     # 封面
     cover: str = None
+    # 创建时间
+    created_at: datetime = None
     
     def __init__(self, **kwargs):
         # 初始化所有属性，从kwargs中获取值，如果不存在则设置默认值
@@ -63,19 +66,17 @@ class People:
         self.introduction = kwargs.get('introduction', {}) if kwargs.get('introduction', {}) is not None else {}
         self.comments = kwargs.get('comments', {}) if kwargs.get('comments', {}) is not None else {}
         self.cover = kwargs.get('cover', None) if kwargs.get('cover', None) is not None else None
+        self.created_at = kwargs.get('created_at', None)
 
     def __str__(self) -> str:
         # 返回对象的字符串表示，包含所有属性
         return (f"People(id={self.id}, name={self.name}, contact={self.contact}, gender={self.gender}, "
                 f"age={self.age}, height={self.height}, marital_status={self.marital_status}, "
                 f"match_requirement={self.match_requirement}, introduction={self.introduction}, "
-                f"comments={self.comments}, cover={self.cover})")
+                f"comments={self.comments}, cover={self.cover}, created_at={self.created_at})")
 
     @classmethod
     def from_dict(cls, data: dict):
-        if 'created_at' in data:
-            # 移除 created_at 字段，避免类型错误
-            del data['created_at']
         if 'updated_at' in data:
             # 移除 updated_at 字段，避免类型错误
             del data['updated_at']
@@ -99,6 +100,7 @@ class People:
             introduction=json.loads(data.introduction) if data.introduction else {},
             comments=json.loads(data.comments) if data.comments else {},
             cover=data.cover,
+            created_at=data.created_at,
         )
 
     def to_dict(self) -> dict:
@@ -115,6 +117,7 @@ class People:
             'introduction': self.introduction,
             'comments': self.comments,
             'cover': self.cover,
+            'created_at': int(self.created_at.timestamp()) if self.created_at else None,
         }      
 
     def to_rldb_model(self) -> PeopleRLDBModel:
