@@ -27,6 +27,37 @@ class PeopleRLDBModel(RLDBBaseModel):
     deleted_at = Column(DateTime(timezone=True), nullable=True, index=True)
 
 
+class Comment:
+    # 评论内容
+    content: str
+    # 评论人
+    author: str
+    # 创建时间
+    created_at: datetime
+    # 更新时间
+    updated_at: datetime
+
+    def __init__(self, **kwargs):
+        self.content = kwargs.get('content', '')
+        self.author = kwargs.get('author', '')
+        self.created_at = kwargs.get('created_at', datetime.now())
+        self.updated_at = kwargs.get('updated_at', datetime.now())
+
+    def to_dict(self) -> dict:
+        return {
+            'content': self.content,
+            'author': self.author,
+            'created_at': int(self.created_at.timestamp()),
+            'updated_at': int(self.updated_at.timestamp()),
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict):
+        data['created_at'] = datetime.fromtimestamp(data['created_at'])
+        data['updated_at'] = datetime.fromtimestamp(data['updated_at'])
+        return cls(**data)
+
+
 class People:
     # 数据库 ID
     id: str
@@ -47,7 +78,7 @@ class People:
     # 个人介绍
     introduction: Dict[str, str]
     # 总结评价
-    comments: Dict[str, str]
+    comments: Dict[str, "Comment"]
     # 封面
     cover: str = None
     # 创建时间
@@ -98,7 +129,7 @@ class People:
             marital_status=data.marital_status,
             match_requirement=data.match_requirement,
             introduction=json.loads(data.introduction) if data.introduction else {},
-            comments=json.loads(data.comments) if data.comments else {},
+            comments={k: Comment.from_dict(v) for k, v in json.loads(data.comments).items()} if data.comments else {},
             cover=data.cover,
             created_at=data.created_at,
         )
@@ -115,7 +146,7 @@ class People:
             'marital_status': self.marital_status,
             'match_requirement': self.match_requirement,
             'introduction': self.introduction,
-            'comments': self.comments,
+            'comments': {k: v.to_dict() for k, v in self.comments.items()},
             'cover': self.cover,
             'created_at': int(self.created_at.timestamp()) if self.created_at else None,
         }      
@@ -132,7 +163,7 @@ class People:
             marital_status=self.marital_status,
             match_requirement=self.match_requirement,
             introduction=json.dumps(self.introduction, ensure_ascii=False),
-            comments=json.dumps(self.comments, ensure_ascii=False),
+            comments=json.dumps({k: v.to_dict() for k, v in self.comments.items()}, ensure_ascii=False),
             cover=self.cover,
         )
     
