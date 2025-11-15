@@ -170,15 +170,15 @@ class People:
     def validate(self) -> error:
         err = error(ErrorCode.SUCCESS, "")
         if not self.name:
-            logging.error("Name is required")
-            err = error(ErrorCode.MODEL_ERROR, "Name is required")
+            logging.error("Name is required, use default")
+            self.name = ""
         if not self.gender in ['男', '女', '未知']:
-            logging.error("Gender must be '男', '女', or '未知'")
-            err = error(ErrorCode.MODEL_ERROR, "Gender must be '男', '女', or '未知'")
-        if not isinstance(self.age, int) or self.age <= 0:
-            logging.error("Age must be an integer and greater than 0")
-            err = error(ErrorCode.MODEL_ERROR, "Age must be an integer and greater than 0")
-        if not isinstance(self.height, int) or self.height <= 0:
-            logging.error("Height must be an integer and greater than 0")
-            err = error(ErrorCode.MODEL_ERROR, "Height must be an integer and greater than 0")
+            logging.error("Gender must be '男', '女', or '未知', use default")
+            self.gender = "未知"
+        if not isinstance(self.age, int) or self.age < 0:
+            logging.error("Age must be an integer and greater than 0, use default")
+            self.age = 0
+        if not isinstance(self.height, int) or self.height < 0:
+            logging.error("Height must be an integer and greater than 0, use default")
+            self.height = 0
         return err
