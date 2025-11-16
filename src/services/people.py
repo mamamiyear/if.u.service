@@ -1,8 +1,10 @@
 
 
 
+import logging
 import uuid
-from models.people import People, PeopleRLDBModel
+from models.people import People, PeopleRLDBModel, Comment
+from datetime import datetime
 from utils.error import ErrorCode, error
 from utils import rldb
 
@@ -65,6 +67,50 @@ class PeopleService:
         peoples = [People.from_rldb_model(people_orm) for people_orm in people_orms]
         
         return peoples, error(ErrorCode.SUCCESS, "")
+
+    def save_remark(self, people_id: str, content: str) -> error:
+        """
+        为人物添加或更新备注
+
+        :param people_id: 人物ID
+        :param content: 备注内容
+        :return: 错误对象
+        """
+        people: People
+        err: error
+        people, err = self.get(people_id)
+        logging.info(f"get people before save remark: {people}")
+        if not err.success:
+            return err
+        remark = people.comments.get("remark", None)
+        if remark is not None:
+            remark.content = content
+            remark.updated_at = datetime.now()
+        else:
+            people.comments["remark"] = Comment(content=content)
+        logging.info(f"save remark for people {people}")
+        _, err = self.save(people)
+        return err
+
+    def delete_remark(self, people_id: str) -> error:
+        """
+        删除人物备注
+
+        :param people_id: 人物ID
+        :return: 错误对象
+        """
+        people: People
+        err: error
+        people, err = self.get(people_id)
+        if not err.success:
+            return err
+
+        if "remark" in people.comments:
+            del people.comments["remark"]
+            _, err = self.save(people)
+            return err
+        
+        return error(ErrorCode.SUCCESS, "")
 
 
 

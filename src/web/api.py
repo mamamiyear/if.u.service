@@ -150,3 +150,24 @@ async def get_peoples(
     peoples = [people.to_dict() for people in results]
     return BaseResponse(error_code=0, error_info="success", data=peoples)
 
+
+class RemarkRequest(BaseModel):
+    content: str
+
+
+@api.post("/people/{people_id}/remark")
+async def post_remark(people_id: str, request: RemarkRequest):
+    service = get_people_service()
+    error = service.save_remark(people_id, request.content)
+    if not error.success:
+        return BaseResponse(error_code=error.code, error_info=error.info)
+    return BaseResponse(error_code=0, error_info="success")
+
+
+@api.delete("/people/{people_id}/remark")
+async def delete_remark(people_id: str):
+    service = get_people_service()
+    error = service.delete_remark(people_id)
+    if not error.success:
+        return BaseResponse(error_code=error.code, error_info=error.info)
+    return BaseResponse(error_code=0, error_info="success")

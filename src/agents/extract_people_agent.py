@@ -21,7 +21,7 @@ class ExtractPeopleAgent(BaseAgent):
                 "身高(cm) height\n"
                 "婚姻状况 marital_status\n"
                 "择偶要求 match_requirement\n"
-                "以上信息需要严格按照 JSON 格式输出 字段名与条目中英文保持一致。\n"
+                "以上信息需要严格按照 JSON 格式输出 字段名与条目中英文保持一致; 若未识别到以上的某项，则不返回该字段，不要自行填写“未知”，“未填写”等类似字眼。\n"
                 "其中，'年龄 age' 和 '身高(cm) height' 必须是一个整数，不能是一个字符串；\n"
                 "并且，'性别 gender' 根据识别结果，必须从 男,女,未知 三选一填写。\n"
                 "除了上述基本信息，还有一个字段\n"

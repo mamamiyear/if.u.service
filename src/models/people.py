@@ -4,6 +4,7 @@
 import json
 import logging
 from typing import Dict
+from datetime import datetime
 from sqlalchemy import Column, Integer, String, Text, DateTime, func
 from utils.rldb import RLDBBaseModel
 from utils.error import ErrorCode, error
@@ -26,6 +27,37 @@ class PeopleRLDBModel(RLDBBaseModel):
     deleted_at = Column(DateTime(timezone=True), nullable=True, index=True)
 
 
+class Comment:
+    # 评论内容
+    content: str
+    # 评论人
+    author: str
+    # 创建时间
+    created_at: datetime
+    # 更新时间
+    updated_at: datetime
+
+    def __init__(self, **kwargs):
+        self.content = kwargs.get('content', '')
+        self.author = kwargs.get('author', '')
+        self.created_at = kwargs.get('created_at', datetime.now())
+        self.updated_at = kwargs.get('updated_at', datetime.now())
+
+    def to_dict(self) -> dict:
+        return {
+            'content': self.content,
+            'author': self.author,
+            'created_at': int(self.created_at.timestamp()),
+            'updated_at': int(self.updated_at.timestamp()),
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict):
+        data['created_at'] = datetime.fromtimestamp(data['created_at'])
+        data['updated_at'] = datetime.fromtimestamp(data['updated_at'])
+        return cls(**data)
+
+
 class People:
     # 数据库 ID
     id: str
@@ -46,9 +78,11 @@ class People:
     # 个人介绍
     introduction: Dict[str, str]
     # 总结评价
-    comments: Dict[str, str]
+    comments: Dict[str, "Comment"]
     # 封面
     cover: str = None
+    # 创建时间
+    created_at: datetime = None
     
     def __init__(self, **kwargs):
         # 初始化所有属性，从kwargs中获取值，如果不存在则设置默认值
@@ -63,19 +97,17 @@ class People:
         self.introduction = kwargs.get('introduction', {}) if kwargs.get('introduction', {}) is not None else {}
         self.comments = kwargs.get('comments', {}) if kwargs.get('comments', {}) is not None else {}
         self.cover = kwargs.get('cover', None) if kwargs.get('cover', None) is not None else None
+        self.created_at = kwargs.get('created_at', None)
 
     def __str__(self) -> str:
         # 返回对象的字符串表示，包含所有属性
         return (f"People(id={self.id}, name={self.name}, contact={self.contact}, gender={self.gender}, "
                 f"age={self.age}, height={self.height}, marital_status={self.marital_status}, "
                 f"match_requirement={self.match_requirement}, introduction={self.introduction}, "
-                f"comments={self.comments}, cover={self.cover})")
+                f"comments={self.comments}, cover={self.cover}, created_at={self.created_at})")
 
     @classmethod
     def from_dict(cls, data: dict):
-        if 'created_at' in data:
-            # 移除 created_at 字段，避免类型错误
-            del data['created_at']
         if 'updated_at' in data:
             # 移除 updated_at 字段，避免类型错误
             del data['updated_at']
@@ -97,8 +129,9 @@ class People:
             marital_status=data.marital_status,
             match_requirement=data.match_requirement,
             introduction=json.loads(data.introduction) if data.introduction else {},
-            comments=json.loads(data.comments) if data.comments else {},
+            comments={k: Comment.from_dict(v) for k, v in json.loads(data.comments).items()} if data.comments else {},
             cover=data.cover,
+            created_at=data.created_at,
         )
 
     def to_dict(self) -> dict:
@@ -113,8 +146,9 @@ class People:
             'marital_status': self.marital_status,
             'match_requirement': self.match_requirement,
             'introduction': self.introduction,
-            'comments': self.comments,
+            'comments': {k: v.to_dict() for k, v in self.comments.items()},
             'cover': self.cover,
+            'created_at': int(self.created_at.timestamp()) if self.created_at else None,
         }      
 
     def to_rldb_model(self) -> PeopleRLDBModel:
@@ -129,22 +163,22 @@ class People:
             marital_status=self.marital_status,
             match_requirement=self.match_requirement,
             introduction=json.dumps(self.introduction, ensure_ascii=False),
-            comments=json.dumps(self.comments, ensure_ascii=False),
+            comments=json.dumps({k: v.to_dict() for k, v in self.comments.items()}, ensure_ascii=False),
             cover=self.cover,
         )
     
     def validate(self) -> error:
         err = error(ErrorCode.SUCCESS, "")
         if not self.name:
-            logging.error("Name is required")
-            err = error(ErrorCode.MODEL_ERROR, "Name is required")
+            logging.error("Name is required, use default")
+            self.name = ""
         if not self.gender in ['男', '女', '未知']:
-            logging.error("Gender must be '男', '女', or '未知'")
-            err = error(ErrorCode.MODEL_ERROR, "Gender must be '男', '女', or '未知'")
-        if not isinstance(self.age, int) or self.age <= 0:
-            logging.error("Age must be an integer and greater than 0")
-            err = error(ErrorCode.MODEL_ERROR, "Age must be an integer and greater than 0")
-        if not isinstance(self.height, int) or self.height <= 0:
-            logging.error("Height must be an integer and greater than 0")
-            err = error(ErrorCode.MODEL_ERROR, "Height must be an integer and greater than 0")
+            logging.error("Gender must be '男', '女', or '未知', use default")
+            self.gender = "未知"
+        if not isinstance(self.age, int) or self.age < 0:
+            logging.error("Age must be an integer and greater than 0, use default")
+            self.age = 0
+        if not isinstance(self.height, int) or self.height < 0:
+            logging.error("Height must be an integer and greater than 0, use default")
+            self.height = 0
         return err
