@@ -38,38 +38,52 @@ async def ping():
 class PostInputRequest(BaseModel):
     text: str
 
-@api.post("/api/recognition/input")
-async def post_input(request: PostInputRequest):
-    people = extract_people(request.text)
-    resp = BaseResponse(error_code=0, error_info="success")
-    resp.data = people.to_dict()
-    return resp
-
-@api.post("/api/recognition/image")
-async def post_input_image(image: UploadFile = File(...)):
+@authorized_router.post("/api/upload/image")
+async def post_upload_image(image: UploadFile = File(...)):
     # 实现上传图片的处理
     # 保存上传的图片文件
     # 生成唯一的文件名
     file_extension = os.path.splitext(image.filename)[1]
     unique_filename = f"{uuid.uuid4()}{file_extension}"
-    
-    # 确保uploads目录存在
-    os.makedirs("uploads", exist_ok=True)
-    
+
     # 保存文件到对象存储
     file_path = f"uploads/{unique_filename}"
     obs_util = obs.get_instance()
-    obs_util.Put(file_path, await image.read())
-    
+    obs_util.put(file_path, await image.read())
+
     # 获取对象存储外链
-    obs_url = obs_util.Link(file_path)
+    obs_url = obs_util.get_link(file_path)
+    return BaseResponse(error_code=0, error_info="success", data=obs_url)
+
+@authorized_router.post("/api/recognition/input")
+async def post_recognition_input(request: PostInputRequest):
+    people = extract_people(request.text)
+    resp = BaseResponse(error_code=0, error_info="success")
+    resp.data = people.to_dict()
+    return resp
+
+@authorized_router.post("/api/recognition/image")
+async def post_recognition_image(image: UploadFile = File(...)):
+    # 实现上传图片的处理
+    # 保存上传的图片文件
+    # 生成唯一的文件名
+    file_extension = os.path.splitext(image.filename)[1]
+    unique_filename = f"{uuid.uuid4()}{file_extension}"
+
+    # 保存文件到对象存储
+    file_path = f"uploads/{unique_filename}"
+    obs_util = obs.get_instance()
+    obs_util.put(file_path, await image.read())
+
+    # 获取对象存储外链
+    obs_url = obs_util.get_link(file_path)
     logging.info(f"obs_url: {obs_url}")
-    
+
     # 调用OCR处理图片
     ocr_util = ocr.get_instance()
     ocr_result = ocr_util.recognize_image_text(obs_url)
     logging.info(f"ocr_result: {ocr_result}")
-    
+
     people = extract_people(ocr_result, obs_url)
     resp = BaseResponse(error_code=0, error_info="success")
     resp.data = people.to_dict()
@@ -130,7 +144,7 @@ class GetPeopleRequest(BaseModel):
     query: Optional[str] = None
     conds: Optional[dict] = None
     top_k: int = 5
-    
+
 @authorized_router.get("/api/peoples")
 async def get_peoples(
     request: Request,
@@ -142,7 +156,7 @@ async def get_peoples(
     limit: int = Query(10, description="分页大小"),
     offset: int = Query(0, description="分页偏移量"),
     ):
-    
+
     # 解析查询参数为字典
     conds = {}
     conds["user_id"] = getattr(request.state, 'user_id', '')
@@ -156,7 +170,7 @@ async def get_peoples(
         conds["height"] = height
     if marital_status:
         conds["marital_status"] = marital_status
-    
+
     logging.info(f"conds: , limit: {limit}, offset: {offset}")
 
     results = []
@@ -174,7 +188,7 @@ class RemarkRequest(BaseModel):
 
 
 @authorized_router.post("/api/people/{people_id}/remark")
-async def post_remark(request: Request, people_id: str, body: RemarkRequest):
+async def post_people_remark(request: Request, people_id: str, body: RemarkRequest):
     service = get_people_service()
     res, err = service.get(people_id)
     if not err.success or not res:
@@ -188,7 +202,7 @@ async def post_remark(request: Request, people_id: str, body: RemarkRequest):
 
 
 @authorized_router.delete("/api/people/{people_id}/remark")
-async def delete_remark(request: Request, people_id: str):
+async def delete_people_remark(request: Request, people_id: str):
     service = get_people_service()
     res, err = service.get(people_id)
     if not err.success or not res:
@@ -198,6 +212,64 @@ async def delete_remark(request: Request, people_id: str):
     error = service.delete_remark(people_id)
     if not error.success:
         return BaseResponse(error_code=error.code, error_info=error.info)
+    return BaseResponse(error_code=0, error_info="success")
+
+
+@authorized_router.post("/api/people/{people_id}/image")
+async def post_people_image(request: Request, people_id: str, image: UploadFile = File(...)):
+
+    # 检查 people id 是否存在
+    service = get_people_service()
+    people, err = service.get(people_id)
+    if not err.success:
+        return BaseResponse(error_code=err.code, error_info=err.info)
+    
+    if people.user_id != getattr(request.state, 'user_id', ''):
+        return BaseResponse(error_code=ErrorCode.MODEL_ERROR.value, error_info="permission denied")
+
+    # 实现上传图片的处理
+    # 保存上传的图片文件
+    # 生成唯一的文件名
+    file_extension = os.path.splitext(image.filename)[1]
+    unique_filename = f"{uuid.uuid4()}{file_extension}"
+
+    # 保存文件到对象存储
+    file_path = f"peoples/{people_id}/images/{unique_filename}"
+    obs_util = obs.get_instance()
+    obs_util.put(file_path, await image.read())
+
+    # 获取对象存储外链
+    obs_url = obs_util.get_link(file_path)
+    logging.info(f"obs_url: {obs_url}")
+
+    return BaseResponse(error_code=0, error_info="success", data=obs_url)
+
+
+@authorized_router.delete("/api/people/{people_id}/image")
+async def delete_people_image(request: Request, people_id: str, image_url: str):
+    # 检查 people id 是否存在
+    service = get_people_service()
+    people, err = service.get(people_id)
+    if not err.success:
+        return BaseResponse(error_code=err.code, error_info=err.info)
+
+    if people.user_id != getattr(request.state, 'user_id', ''):
+        return BaseResponse(error_code=ErrorCode.MODEL_ERROR.value, error_info="permission denied")
+
+    # 检查 image_url 是否是该 people 名下的图片链接
+    obs_util = obs.get_instance()
+    obs_path, err = obs_util.get_obs_path_by_link(image_url)
+    if not err.success:
+        return BaseResponse(error_code=err.code, error_info=err.info)
+    if not obs_path.startswith(f"peoples/{people_id}/images/"):
+        return BaseResponse(error_code=ErrorCode.OBS_INPUT_ERROR, error_info=f"文件 {image_url} 不是 {people_id} 名下的图片链接")
+
+    # 实现删除图片的处理
+    # 删除对象存储中的文件
+    err = obs_util.delete_by_link(image_url)
+    if not err.success:
+        return BaseResponse(error_code=err.code, error_info=err.info)
+
     return BaseResponse(error_code=0, error_info="success")
 
 
@@ -410,5 +482,6 @@ async def update_user_email(request: Request, body: UpdateEmailRequest):
         'email': user.email,
     }
     return BaseResponse(error_code=0, error_info="success", data=data)
+
 
 api.include_router(authorized_router)

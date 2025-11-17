@@ -7,6 +7,9 @@ class ErrorCode(Enum):
     SUCCESS = 0
     MODEL_ERROR = 1000
     RLDB_ERROR = 2100
+    OBS_ERROR = 3100
+    OBS_INPUT_ERROR = 3102
+    OBS_SERVICE_ERROR = 3103
 
 class error(Protocol):
     _error_code: int = 0

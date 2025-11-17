@@ -4,11 +4,13 @@ import logging
 from typing import Protocol
 import qiniu
 import requests
+
+from .error import ErrorCode, error
 from .config import get_instance as get_config
 
 
 class OBS(Protocol):
-    def Put(self, obs_path: str, content: bytes) -> str:
+    def put(self, obs_path: str, content: bytes) -> str:
         """
         上传文件到OBS
         
@@ -21,7 +23,7 @@ class OBS(Protocol):
         """
         ...
     
-    def Get(self, obs_path: str) -> bytes:
+    def get(self, obs_path: str) -> bytes:
         """
         从OBS下载文件
         
@@ -33,7 +35,7 @@ class OBS(Protocol):
         """
         ...
     
-    def List(self, obs_path: str) -> list:
+    def list(self, obs_path: str) -> list:
         """
         列出OBS目录下的所有文件
         
@@ -45,7 +47,7 @@ class OBS(Protocol):
         """
         ...
     
-    def Del(self, obs_path: str) -> bool:
+    def delete(self, obs_path: str) -> error:
         """
         删除OBS文件
         
@@ -57,7 +59,7 @@ class OBS(Protocol):
         """
         ...
     
-    def Link(self, obs_path: str) -> str:
+    def get_link(self, obs_path: str) -> str:
         """
         获取OBS文件链接
         
@@ -66,6 +68,31 @@ class OBS(Protocol):
         
         Returns:
             str: OBS文件链接
+        """
+        ...
+    
+    def delete_by_link(self, obs_link: str) -> error:
+        """
+        根据OBS文件链接删除文件
+        
+        Args:
+            obs_link (str): OBS文件链接
+        
+        Returns:
+            bool: 是否删除成功
+        """
+        ...
+    
+    def get_obs_path_by_link(self, obs_link: str) -> (str, error):
+        """
+        从OBS文件链接获取OBS路径
+        
+        Args:
+            obs_link (str): OBS文件链接
+        
+        Returns:
+            str: OBS文件路径
+            error: 错误信息
         """
         ...
 
@@ -82,7 +109,7 @@ class Koodo:
         self.bucket = qiniu.BucketManager(self.auth)
         pass
     
-    def Put(self, obs_path: str, content: bytes) -> str:
+    def put(self, obs_path: str, content: bytes) -> str:
         """
         上传文件到OBS
         
@@ -103,7 +130,7 @@ class Koodo:
         logging.info(f"文件 {obs_path} 上传成功, OBS路径: {full_path}")
         return f"{self.outer_domain}/{full_path}"
 
-    def Get(self, obs_path: str) -> bytes:
+    def get(self, obs_path: str) -> bytes:
         """
         从OBS下载文件
         
@@ -121,7 +148,7 @@ class Koodo:
             return None
         return resp.content
     
-    def List(self, prefix: str = "") -> list[str]:
+    def list(self, prefix: str = "") -> list[str]:
         """
         列出OBS目录下的所有文件
         
@@ -143,7 +170,7 @@ class Koodo:
         # logging.debug(f"info: {info}")
         return keys
     
-    def Del(self, obs_path: str) -> bool:
+    def delete(self, obs_path: str) -> error:
         """
         删除OBS文件
         
@@ -151,17 +178,17 @@ class Koodo:
             obs_path (str): OBS文件路径
         
         Returns:
-            bool: 是否删除成功
+            error: 删除结果
         """
         ret, info = self.bucket.delete(self.bucket_name, f"{self.prefix_path}{obs_path}")
-        logging.debug(f"文件 {obs_path} 删除 OBS, 结果: {ret}, 状态码: {info.status_code}, 错误信息: {info.text_body}")
+        logging.debug(f"文件 {self.prefix_path}{obs_path} 删除 OBS, 结果: {ret}, 状态码: {info.status_code}, 错误信息: {info.text_body}")
         if ret is None or info.status_code != 200:
             logging.error(f"文件 {obs_path} 删除 OBS 失败, 错误信息: {info.text_body}")
-            return False
+            return error(error_code=ErrorCode.OBS_INPUT_ERROR, error_info=f"文件 {self.prefix_path}{obs_path} 删除 OBS 失败, 错误信息: {info.text_body}")
         logging.info(f"文件 {obs_path} 删除 OBS 成功")
-        return True
+        return error(error_code=ErrorCode.SUCCESS, error_info="success")
     
-    def Link(self, obs_path: str) -> str:
+    def get_link(self, obs_path: str) -> str:
         """
         获取OBS文件链接
         
@@ -172,6 +199,38 @@ class Koodo:
             str: OBS文件链接
         """
         return f"{self.outer_domain}/{self.prefix_path}{obs_path}"
+
+    def delete_by_link(self, obs_link: str) -> error:
+        """
+        根据OBS文件链接删除文件
+        
+        Args:
+            obs_link (str): OBS文件链接
+        
+        Returns:
+            error: 删除结果
+        """
+        obs_path, err = self.get_obs_path_by_link(obs_link)
+        if not err.success:
+            return err
+        return self.delete(obs_path)
+    
+    def get_obs_path_by_link(self, obs_link: str) -> (str, error):
+        """
+        从OBS文件链接获取OBS路径
+        
+        Args:
+            obs_link (str): OBS文件链接
+        
+        Returns:
+            str: OBS文件路径
+            error: 错误信息
+        """
+        if not obs_link.startswith(f"{self.outer_domain}/{self.prefix_path}"):
+            logging.error(f"文件 {obs_link} 不是 OBS 文件链接")
+            return "", error(error_code=ErrorCode.OBS_INPUT_ERROR, error_info=f"文件 {obs_link} 不是 OBS 文件链接")
+        obs_path = obs_link[len(self.outer_domain) + len(self.prefix_path) + 1:]
+        return obs_path, error(error_code=ErrorCode.SUCCESS, error_info="success")
 
 
 _obs_instance: OBS = None
@@ -213,8 +272,8 @@ if __name__ == "__main__":
     # print(f"文件 {obs_path} 链接: {link}")
     
     # 列出OBS目录下的所有文件
-    keys = obs.List("")
+    keys = obs.list("")
     print(f"OBS 目录下的所有文件: {keys}")
     for key in keys:
-        link = obs.Del(key)
+        link = obs.delete(key)
         print(f"文件 {key} 删除 OBS 成功: {link}")
