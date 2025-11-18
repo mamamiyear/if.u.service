@@ -4,7 +4,8 @@ import os
 import argparse
 import uvicorn
 from services import people as people_service
-from utils import config, logger, obs, ocr, rldb
+from services import user as user_service
+from utils import config, logger, obs, ocr, rldb, sms, mailer
 
 from web.api import api
 
@@ -16,16 +17,19 @@ def main():
     args = parser.parse_args()
     
     config.init(args.config)
+    conf = config.get_instance()
+    
     logger.init()
-    
     rldb.init()
-    
     ocr.init()
     obs.init()
-    
+    mailer.init(conf.get('mailer', 'type', fallback='real'))
+    sms.init(conf.get('sms', 'type', fallback='real'))
+
     people_service.init()
+    user_service.init()
     
-    conf = config.get_instance()
+    
 
     host = conf.get('web_service', 'server_host', fallback='0.0.0.0')
     port = conf.getint('web_service', 'server_port', fallback=8099)
