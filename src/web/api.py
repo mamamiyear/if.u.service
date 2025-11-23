@@ -13,6 +13,7 @@ from models.people import People
 from agents.extract_people_agent import ExtractPeopleAgent
 from utils import obs, ocr
 from utils.config import get_instance as get_config
+from utils.error import ErrorCode
 
 api = FastAPI(title="Single People Management and Searching", version="0.1")
 api.add_middleware(
@@ -84,18 +85,19 @@ def extract_people(text: str, cover_link: str = None) -> People:
 class PostPeopleRequest(BaseModel):
     people: dict
 
-@api.post("/api/people")
-async def post_people(post_people_request: PostPeopleRequest):
+@authorized_router.post("/api/people")
+async def post_people(request: Request, post_people_request: PostPeopleRequest):
     logging.debug(f"post_people_request: {post_people_request}")
     people = People.from_dict(post_people_request.people)
+    people.user_id = getattr(request.state, 'user_id', '')
     service = get_people_service()
     people.id, error = service.save(people)
     if not error.success:
         return BaseResponse(error_code=error.code, error_info=error.info)
     return BaseResponse(error_code=0, error_info="success", data=people.id)
 
-@api.put("/api/people/{people_id}")
-async def update_people(people_id: str, post_people_request: PostPeopleRequest):
+@authorized_router.put("/api/people/{people_id}")
+async def update_people(request: Request, people_id: str, post_people_request: PostPeopleRequest):
     logging.debug(f"post_people_request: {post_people_request}")
     people = People.from_dict(post_people_request.people)
     people.id = people_id
@@ -103,14 +105,22 @@ async def update_people(people_id: str, post_people_request: PostPeopleRequest):
     res, error = service.get(people_id)
     if not error.success or not res:
         return BaseResponse(error_code=error.code, error_info=error.info)
+    if res.user_id != getattr(request.state, 'user_id', ''):
+        return BaseResponse(error_code=ErrorCode.MODEL_ERROR.value, error_info="permission denied")
+    people.user_id = res.user_id
     _, error = service.save(people)
     if not error.success:
         return BaseResponse(error_code=error.code, error_info=error.info)
     return BaseResponse(error_code=0, error_info="success")
 
-@api.delete("/api/people/{people_id}")
-async def delete_people(people_id: str):
+@authorized_router.delete("/api/people/{people_id}")
+async def delete_people(request: Request, people_id: str):
     service = get_people_service()
+    res, err = service.get(people_id)
+    if not err.success or not res:
+        return BaseResponse(error_code=err.code, error_info=err.info)
+    if res.user_id != getattr(request.state, 'user_id', ''):
+        return BaseResponse(error_code=ErrorCode.MODEL_ERROR.value, error_info="permission denied")
     error = service.delete(people_id)
     if not error.success:
         return BaseResponse(error_code=error.code, error_info=error.info)
@@ -121,8 +131,9 @@ class GetPeopleRequest(BaseModel):
     conds: Optional[dict] = None
     top_k: int = 5
     
-@api.get("/api/peoples")
+@authorized_router.get("/api/peoples")
 async def get_peoples(
+    request: Request,
     name: Optional[str] = Query(None, description="姓名"),
     gender: Optional[str] = Query(None, description="性别"),
     age: Optional[int] = Query(None, description="年龄"),
@@ -134,6 +145,7 @@ async def get_peoples(
     
     # 解析查询参数为字典
     conds = {}
+    conds["user_id"] = getattr(request.state, 'user_id', '')
     if name:
         conds["name"] = name
     if gender:
@@ -161,18 +173,28 @@ class RemarkRequest(BaseModel):
     content: str
 
 
-@api.post("/api/people/{people_id}/remark")
-async def post_remark(people_id: str, request: RemarkRequest):
+@authorized_router.post("/api/people/{people_id}/remark")
+async def post_remark(request: Request, people_id: str, body: RemarkRequest):
     service = get_people_service()
-    error = service.save_remark(people_id, request.content)
+    res, err = service.get(people_id)
+    if not err.success or not res:
+        return BaseResponse(error_code=err.code, error_info=err.info)
+    if res.user_id != getattr(request.state, 'user_id', ''):
+        return BaseResponse(error_code=ErrorCode.MODEL_ERROR.value, error_info="permission denied")
+    error = service.save_remark(people_id, body.content)
     if not error.success:
         return BaseResponse(error_code=error.code, error_info=error.info)
     return BaseResponse(error_code=0, error_info="success")
 
 
-@api.delete("/api/people/{people_id}/remark")
-async def delete_remark(people_id: str):
+@authorized_router.delete("/api/people/{people_id}/remark")
+async def delete_remark(request: Request, people_id: str):
     service = get_people_service()
+    res, err = service.get(people_id)
+    if not err.success or not res:
+        return BaseResponse(error_code=err.code, error_info=err.info)
+    if res.user_id != getattr(request.state, 'user_id', ''):
+        return BaseResponse(error_code=ErrorCode.MODEL_ERROR.value, error_info="permission denied")
     error = service.delete_remark(people_id)
     if not error.success:
         return BaseResponse(error_code=error.code, error_info=error.info)

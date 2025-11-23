@@ -12,6 +12,7 @@ from utils.error import ErrorCode, error
 class PeopleRLDBModel(RLDBBaseModel):
     __tablename__ = 'peoples'
     id = Column(String(36), primary_key=True)
+    user_id = Column(String(36), index=True)
     name = Column(String(255), index=True)
     contact = Column(String(255), index=True)
     gender = Column(String(10))
@@ -61,6 +62,8 @@ class Comment:
 class People:
     # 数据库 ID
     id: str
+    # 所属用户 ID
+    user_id: str
     # 姓名
     name: str
     # 联系人
@@ -87,6 +90,7 @@ class People:
     def __init__(self, **kwargs):
         # 初始化所有属性，从kwargs中获取值，如果不存在则设置默认值
         self.id = kwargs.get('id', '') if kwargs.get('id', '') is not None else ''
+        self.user_id = kwargs.get('user_id', '') if kwargs.get('user_id', '') is not None else ''
         self.name = kwargs.get('name', '') if kwargs.get('name', '') is not None else ''
         self.contact = kwargs.get('contact', '') if kwargs.get('contact', '') is not None else ''
         self.gender = kwargs.get('gender', '') if kwargs.get('gender', '') is not None else ''
@@ -121,6 +125,7 @@ class People:
         # 将关系数据库模型转换为对象
         return cls(
             id=data.id,
+            user_id=data.user_id,
             name=data.name,
             contact=data.contact,
             gender=data.gender,
@@ -138,6 +143,7 @@ class People:
         # 将对象转换为字典格式
         return {
             'id': self.id,
+            'user_id': self.user_id,
             'name': self.name,
             'contact': self.contact,
             'gender': self.gender,
@@ -155,6 +161,7 @@ class People:
         # 将对象转换为关系数据库模型
         return PeopleRLDBModel(
             id=self.id,
+            user_id=self.user_id,
             name=self.name,
             contact=self.contact,
             gender=self.gender,
