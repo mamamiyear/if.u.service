@@ -6,8 +6,10 @@ from typing import Any, Optional, Literal
 from fastapi import FastAPI, HTTPException, UploadFile, File, Query, Response, APIRouter, Depends, Request
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
+from models.custom import Custom, CustomRLDBModel
 from services.people import get_instance as get_people_service
 from services.user import get_instance as get_user_service
+from services.custom import get_instance as get_custom_service
 from web.auth import require_auth
 from models.people import People
 from agents.extract_people_agent import ExtractPeopleAgent
@@ -95,6 +97,74 @@ def extract_people(text: str, cover_link: str = None) -> People:
     people.cover = cover_link
     logging.info(f"people: {people}")
     return people
+
+class PostCustomRequest(BaseModel):
+    custom: dict
+
+@authorized_router.post("/api/custom")
+def create_custom(request: Request, post_custom_request: PostCustomRequest):
+    logging.debug(f"post_custom_request: {post_custom_request}")
+    custom = Custom.from_dict(post_custom_request.custom)
+    custom.user_id = getattr(request.state, 'user_id', '')
+    
+    service = get_custom_service()
+    custom.id, error = service.save(custom)
+    
+    if not error.success:
+        return BaseResponse(error_code=error.code, error_info=error.info)
+    return BaseResponse(error_code=0, error_info="success", data=custom.id)
+
+@authorized_router.put("/api/custom/{custom_id}")
+def update_custom(request: Request, custom_id: str, post_custom_request: PostCustomRequest):
+    logging.debug(f"post_custom_request: {post_custom_request}")
+    custom = Custom.from_dict(post_custom_request.custom)
+    custom.id = custom_id
+    
+    service = get_custom_service()
+    # Check permission
+    res, error = service.get(custom_id)
+    if not error.success or not res:
+        return BaseResponse(error_code=error.code, error_info=error.info)
+    if res.user_id != getattr(request.state, 'user_id', ''):
+        return BaseResponse(error_code=ErrorCode.MODEL_ERROR.value, error_info="permission denied")
+        
+    custom.user_id = res.user_id # Ensure user_id is not changed or is set correctly
+    
+    _, error = service.save(custom)
+    if not error.success:
+        return BaseResponse(error_code=error.code, error_info=error.info)
+    return BaseResponse(error_code=0, error_info="success")
+
+@authorized_router.delete("/api/custom/{custom_id}")
+def delete_custom(request: Request, custom_id: str):
+    service = get_custom_service()
+    res, error = service.get(custom_id)
+    if not error.success or not res:
+        return BaseResponse(error_code=error.code, error_info=error.info)
+    if res.user_id != getattr(request.state, 'user_id', ''):
+        return BaseResponse(error_code=ErrorCode.MODEL_ERROR.value, error_info="permission denied")
+    _, error = service.delete(custom_id)
+    if not error.success:
+        return BaseResponse(error_code=error.code, error_info=error.info)
+    return BaseResponse(error_code=0, error_info="success", data=custom_id)
+
+@authorized_router.get("/api/customs")
+def get_customs(request: Request):
+    service = get_custom_service()
+    res, error = service.get_all(getattr(request.state, 'user_id', ''))
+    if not error.success:
+        return BaseResponse(error_code=error.code, error_info=error.info)
+    return BaseResponse(error_code=0, error_info="success", data=res)
+
+@authorized_router.get("/api/custom/{custom_id}")
+def get_custom(request: Request, custom_id: str):
+    service = get_custom_service()
+    res, error = service.get(custom_id)
+    if not error.success or not res:
+        return BaseResponse(error_code=error.code, error_info=error.info)
+    if res.user_id != getattr(request.state, 'user_id', ''):
+        return BaseResponse(error_code=ErrorCode.MODEL_ERROR.value, error_info="permission denied")
+    return BaseResponse(error_code=0, error_info="success", data=res)
 
 class PostPeopleRequest(BaseModel):
     people: dict
