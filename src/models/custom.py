@@ -18,9 +18,9 @@ class CustomRLDBModel(RLDBBaseModel):
     user_id = Column(String(36), index=True, nullable=False)
     
     # 基本信息
-    name = Column(String(255), index=True)
-    gender = Column(String(10))
-    birth = Column(Integer) # 出生年份
+    name = Column(String(255), index=True, nullable=False)
+    gender = Column(String(10), nullable=False)
+    birth = Column(Integer, nullable=False) # 出生年份
     phone = Column(String(50), index=True)
     email = Column(String(255), index=True)
     
@@ -250,11 +250,24 @@ class Custom:
 
     def validate(self) -> error:
         # 数据校验逻辑
-        if self.gender not in ['男', '女', '未知']:
-            logging.warning(f"Invalid gender: {self.gender}. Defaulting to '未知'.")
-            self.gender = "未知"
-        if not isinstance(self.birth, int) or self.birth < 0:
-            logging.warning(f"Invalid birth year: {self.birth}. Defaulting to 0.")
-            self.birth = 0
+        if not self.name:
+            return error(ErrorCode.INVALID_PARAMS, "Name cannot be empty.")
+            
+        if not self.gender:
+            return error(ErrorCode.INVALID_PARAMS, "Gender cannot be empty.")
+            
+        if self.gender not in ['男', '女']:
+            return error(ErrorCode.INVALID_PARAMS, "Gender must be '男' or '女'.")
+            
+        current_year = datetime.now().year
+        min_birth_year = 1950
+        max_birth_year = current_year - 18
+        
+        if not isinstance(self.birth, int):
+             return error(ErrorCode.INVALID_PARAMS, "Birth year must be an integer.")
+        
+        if self.birth < min_birth_year or self.birth > max_birth_year:
+             return error(ErrorCode.INVALID_PARAMS, f"Birth year must be between {min_birth_year} and {max_birth_year}.")
+
         # ... 可根据需要添加更多校验 ...
         return error(ErrorCode.SUCCESS, "")

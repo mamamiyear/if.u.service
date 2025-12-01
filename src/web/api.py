@@ -105,6 +105,12 @@ class PostCustomRequest(BaseModel):
 def create_custom(request: Request, post_custom_request: PostCustomRequest):
     logging.debug(f"post_custom_request: {post_custom_request}")
     custom = Custom.from_dict(post_custom_request.custom)
+    
+    # Validate custom data
+    err = custom.validate()
+    if not err.success:
+        return BaseResponse(error_code=err.code, error_info=err.info)
+        
     custom.user_id = getattr(request.state, 'user_id', '')
     
     service = get_custom_service()
@@ -119,6 +125,11 @@ def update_custom(request: Request, custom_id: str, post_custom_request: PostCus
     logging.debug(f"post_custom_request: {post_custom_request}")
     custom = Custom.from_dict(post_custom_request.custom)
     custom.id = custom_id
+    
+    # Validate custom data
+    err = custom.validate()
+    if not err.success:
+        return BaseResponse(error_code=err.code, error_info=err.info)
     
     service = get_custom_service()
     # Check permission
