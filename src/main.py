@@ -43,7 +43,7 @@ def main():
     conf = config.get_instance()
     host = conf.get('web_service', 'server_host', fallback='0.0.0.0')
     port = conf.getint('web_service', 'server_port', fallback=8099)
-    uvicorn.run("src.main:api", host=host, port=port, reload=True) # Modified to string import for reload support in main too, though api object also works
+    uvicorn.run(api, host=host, port=port)
 
 if __name__ == "__main__":
     main()

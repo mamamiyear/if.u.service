@@ -161,8 +161,8 @@ async def upload_avatar(request: Request, avatar: UploadFile = File(...)):
 
     try:
         obs_util = obs.get_instance()
-        obs_util.Put(avatar_path, await avatar.read())
-        avatar_url = obs_util.Link(avatar_path)
+        obs_util.put(avatar_path, await avatar.read())
+        avatar_url = obs_util.get_link(avatar_path)
 
         user_service = get_user_service()
         _, err = user_service.update_profile(user_id, avatar_link=avatar_url)

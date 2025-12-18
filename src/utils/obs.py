@@ -266,9 +266,9 @@ if __name__ == "__main__":
     # if content is None:
     #     print(f"文件 {local_path} 读取失败")
     #     exit(1)
-    # obs.Put(obs_path, content)
+    # obs.put(obs_path, content)
     
-    # link = obs.Link(obs_path)
+    # link = obs.get_link(obs_path)
     # print(f"文件 {obs_path} 链接: {link}")
     
     # 列出OBS目录下的所有文件
