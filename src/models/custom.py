@@ -23,6 +23,7 @@ class CustomRLDBModel(RLDBBaseModel):
     birth = Column(Integer, nullable=False) # 出生年份
     phone = Column(String(50), index=True)
     email = Column(String(255), index=True)
+    marital = Column(String(10)) # 婚姻状态
     
     # 外貌信息
     height = Column(Integer)
@@ -73,6 +74,7 @@ class Custom:
     birth: int
     phone: str
     email: str
+    marital: str
     
     # 外貌信息
     height: int
@@ -116,6 +118,7 @@ class Custom:
         self.birth = kwargs.get('birth', 0)
         self.phone = kwargs.get('phone', '')
         self.email = kwargs.get('email', '')
+        self.marital = kwargs.get('marital', '未知')
         self.height = kwargs.get('height', 0)
         self.weight = kwargs.get('weight', 0)
         self.images = kwargs.get('images', [])
@@ -165,6 +168,7 @@ class Custom:
             'birth': self.birth,
             'phone': self.phone,
             'email': self.email,
+            'marital': self.marital,
             'height': self.height,
             'weight': self.weight,
             'images': self.images,
@@ -200,6 +204,7 @@ class Custom:
             birth=data.birth,
             phone=data.phone,
             email=data.email,
+            marital=data.marital,
             height=data.height,
             weight=data.weight,
             images=json.loads(data.images) if data.images else [],
@@ -234,6 +239,7 @@ class Custom:
             birth=self.birth,
             phone=self.phone,
             email=self.email,
+            marital=self.marital,
             height=self.height,
             weight=self.weight,
             images=json.dumps(self.images, ensure_ascii=False),
@@ -261,31 +267,35 @@ class Custom:
     def validate(self) -> error:
         # 数据校验逻辑
         if not self.name:
-            return error(ErrorCode.INVALID_PARAMS, "Name cannot be empty.")
+            return error(ErrorCode.MODEL_FIELD_ERROR, "Name cannot be empty.")
             
         if not self.gender:
-            return error(ErrorCode.INVALID_PARAMS, "Gender cannot be empty.")
+            return error(ErrorCode.MODEL_FIELD_ERROR, "Gender cannot be empty.")
             
-        if self.gender not in ['男', '女']:
-            return error(ErrorCode.INVALID_PARAMS, "Gender must be '男' or '女'.")
+        if self.gender not in ['男', '女', '未知']:
+            return error(ErrorCode.MODEL_FIELD_ERROR, "Gender must be '男', '女' or '未知'.")
+
+        valid_maritals = ["未婚", "离异", "丧偶", "未知"]
+        if self.marital not in valid_maritals:
+             return error(ErrorCode.MODEL_FIELD_ERROR, f"Marital status must be one of {valid_maritals}")
             
         current_year = datetime.now().year
         min_birth_year = 1950
         max_birth_year = current_year - 18
         
         if not isinstance(self.birth, int):
-             return error(ErrorCode.INVALID_PARAMS, "Birth year must be an integer.")
+             return error(ErrorCode.MODEL_FIELD_ERROR, "Birth year must be an integer.")
         
         if self.birth < min_birth_year or self.birth > max_birth_year:
-             return error(ErrorCode.INVALID_PARAMS, f"Birth year must be between {min_birth_year} and {max_birth_year}.")
+             return error(ErrorCode.MODEL_FIELD_ERROR, f"Birth year must be between {min_birth_year} and {max_birth_year}.")
 
         valid_houses = ["", "有房无贷", "有房有贷", "无自有房"]
         if self.house not in valid_houses:
-            return error(ErrorCode.INVALID_PARAMS, f"House must be one of {valid_houses}")
+            return error(ErrorCode.MODEL_FIELD_ERROR, f"House must be one of {valid_houses}")
 
         valid_cars = ["", "有车无贷", "有车有贷", "无自有车"]
         if self.car not in valid_cars:
-            return error(ErrorCode.INVALID_PARAMS, f"Car must be one of {valid_cars}")
+            return error(ErrorCode.MODEL_FIELD_ERROR, f"Car must be one of {valid_cars}")
 
         # ... 可根据需要添加更多校验 ...
         return error(ErrorCode.SUCCESS, "")

@@ -20,6 +20,7 @@ class ExtractCustomAgent(BaseAgent):
                 "出生年份 birth (整数年份，如 1990；若文本只提供了年龄，请根据当前日期计算出出生年份)\n"
                 "手机号 phone\n"
                 "邮箱 email\n"
+                "婚姻状态 marital (未婚/离异/丧偶/未知)\n"
                 "身高(cm) height (整数)\n"
                 "体重(kg) weight (整数)\n"
                 "学历 degree\n"

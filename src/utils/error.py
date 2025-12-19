@@ -6,6 +6,7 @@ from typing import Protocol
 class ErrorCode(Enum):
     SUCCESS = 0
     MODEL_ERROR = 1000
+    MODEL_FIELD_ERROR = 1001
     RLDB_ERROR = 2100
     RLDB_NOT_FOUND = 2101
     OBS_ERROR = 3100

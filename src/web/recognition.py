@@ -44,7 +44,7 @@ async def post_recognition_input(model: str, request: PostInputRequest):
     elif model == "custom":
         result = await run_in_threadpool(extract_custom, request.text)
     else:
-        return BaseResponse(error_code=ErrorCode.INVALID_PARAMS.value, error_info=f"Unknown model: {model}")
+        return BaseResponse(error_code=ErrorCode.MODEL_FIELD_ERROR.value, error_info=f"Unknown model: {model}")
     
     if result is None:
          return BaseResponse(error_code=ErrorCode.MODEL_ERROR.value, error_info="Extraction failed")
@@ -56,7 +56,7 @@ async def post_recognition_input(model: str, request: PostInputRequest):
 @router.post("/api/recognition/{model}/image")
 async def post_recognition_image(model: str, image: UploadFile = File(...)):
     if model not in ["people", "custom"]:
-        return BaseResponse(error_code=ErrorCode.INVALID_PARAMS.value, error_info=f"Unknown model: {model}")
+        return BaseResponse(error_code=ErrorCode.MODEL_FIELD_ERROR.value, error_info=f"Unknown model: {model}")
 
     # 实现上传图片的处理
     # 保存上传的图片文件
