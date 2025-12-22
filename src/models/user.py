@@ -14,6 +14,8 @@ class UserRLDBModel(RLDBBaseModel):
     email = Column(String(127), unique=True, index=True)
     phone = Column(String(32), unique=True, index=True)
     password_hash = Column(String(255))
+    org_id = Column(String(36), index=True, nullable=True)
+    org_role = Column(String(32), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
     deleted_at = Column(DateTime(timezone=True), nullable=True, index=True)
@@ -46,6 +48,8 @@ class User:
     email: str
     phone: str
     password_hash: str
+    org_id: str
+    org_role: str
     created_at: datetime = None
 
     def __init__(self, **kwargs):
@@ -55,6 +59,8 @@ class User:
         self.email = kwargs.get('email', '') if kwargs.get('email', '') is not None else ''
         self.phone = kwargs.get('phone', '') if kwargs.get('phone', '') is not None else ''
         self.password_hash = kwargs.get('password_hash', '') if kwargs.get('password_hash', '') is not None else ''
+        self.org_id = kwargs.get('org_id', '') if kwargs.get('org_id', '') is not None else ''
+        self.org_role = kwargs.get('org_role', '') if kwargs.get('org_role', '') is not None else ''
         self.created_at = kwargs.get('created_at', None)
 
     def __str__(self) -> str:
@@ -78,6 +84,8 @@ class User:
             email=data.email,
             phone=data.phone,
             password_hash=data.password_hash,
+            org_id=data.org_id,
+            org_role=data.org_role,
             created_at=data.created_at,
         )
 
@@ -88,6 +96,8 @@ class User:
             'avatar_link': self.avatar_link,
             'email': self.email,
             'phone': self.phone,
+            'org_id': self.org_id,
+            'org_role': self.org_role,
             'created_at': int(self.created_at.timestamp()) if self.created_at else None,
         }
 
@@ -99,6 +109,8 @@ class User:
             email=self.email,
             phone=self.phone,
             password_hash=self.password_hash,
+            org_id=self.org_id,
+            org_role=self.org_role,
         )
 
     def validate(self) -> error:

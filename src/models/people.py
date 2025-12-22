@@ -8,6 +8,7 @@ from datetime import datetime
 from sqlalchemy import Column, Integer, String, Text, DateTime, func
 from utils.rldb import RLDBBaseModel
 from utils.error import ErrorCode, error
+from models.comment import Comment
 
 class PeopleRLDBModel(RLDBBaseModel):
     __tablename__ = 'peoples'
@@ -26,37 +27,6 @@ class PeopleRLDBModel(RLDBBaseModel):
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
     deleted_at = Column(DateTime(timezone=True), nullable=True, index=True)
-
-
-class Comment:
-    # 评论内容
-    content: str
-    # 评论人
-    author: str
-    # 创建时间
-    created_at: datetime
-    # 更新时间
-    updated_at: datetime
-
-    def __init__(self, **kwargs):
-        self.content = kwargs.get('content', '')
-        self.author = kwargs.get('author', '')
-        self.created_at = kwargs.get('created_at', datetime.now())
-        self.updated_at = kwargs.get('updated_at', datetime.now())
-
-    def to_dict(self) -> dict:
-        return {
-            'content': self.content,
-            'author': self.author,
-            'created_at': int(self.created_at.timestamp()),
-            'updated_at': int(self.updated_at.timestamp()),
-        }
-
-    @classmethod
-    def from_dict(cls, data: dict):
-        data['created_at'] = datetime.fromtimestamp(data['created_at'])
-        data['updated_at'] = datetime.fromtimestamp(data['updated_at'])
-        return cls(**data)
 
 
 class People:

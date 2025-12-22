@@ -3,7 +3,8 @@
 
 import logging
 import uuid
-from models.people import People, PeopleRLDBModel, Comment
+from models.people import People, PeopleRLDBModel
+from models.comment import Comment
 from datetime import datetime
 from utils.error import ErrorCode, error
 from utils import rldb
@@ -87,7 +88,7 @@ class PeopleService:
             remark.content = content
             remark.updated_at = datetime.now()
         else:
-            people.comments["remark"] = Comment(content=content)
+            people.comments["remark"] = Comment(user_id=people_id, content=content)
         logging.info(f"save remark for people {people}")
         _, err = self.save(people)
         return err

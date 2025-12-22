@@ -112,7 +112,11 @@ class SqlAlchemyDB():
             sel = session.query(model)
             sel = sel.filter(model.deleted_at.is_(None))
             if filters:
-                sel = sel.filter_by(**filters)
+                for attr, value in filters.items():
+                    if isinstance(value, (list, tuple)):
+                        sel = sel.filter(getattr(model, attr).in_(value))
+                    else:
+                        sel = sel.filter(getattr(model, attr) == value)
             if limit:
                 sel = sel.limit(limit)
             if offset:

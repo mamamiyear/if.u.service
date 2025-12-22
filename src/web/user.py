@@ -5,6 +5,7 @@ from typing import Optional, Literal
 from fastapi import APIRouter, Depends, Request, HTTPException, Response, UploadFile, File
 from pydantic import BaseModel
 from services.user import get_instance as get_user_service
+from services.organization import get_instance as get_organization_service
 from web.auth import require_auth
 from utils import obs
 from utils.config import get_instance as get_config
@@ -46,6 +47,9 @@ async def user_register(request: RegisterRequest):
         email=request.email or "",
         phone=request.phone or "",
         password_hash=request.password,
+        # 以下为临时方案
+        org_id="03387b86d58842e390823080d22fec38",
+        org_role="staff",
     )
     uid, err = service.register(u, request.code)
     if not err.success:
@@ -113,10 +117,42 @@ async def user_me(request: Request):
     if not err.success or not user:
         raise HTTPException(status_code=400, detail=err.info)
     data = {
+        'id': user.id,
         'nickname': user.nickname,
         'avatar_link': user.avatar_link,
         'phone': user.phone,
         'email': user.email,
+    }
+    if user.org_id:
+        # 查询组织信息
+        org_service = get_organization_service()
+        org, err = org_service.get(user.org_id)
+        if not err.success or not org:
+            raise HTTPException(status_code=400, detail=err.info)
+        data['organization'] = {
+            'id': org.id,
+            'name': org.name,
+            'logo': org.logo,
+            'role': user.org_role,
+        }
+    return BaseResponse(error_code=0, error_info="success", data=data)
+
+
+@router.get("/api/user/{user_id}", dependencies=[Depends(require_auth)])
+async def get_other_user_info(user_id: str, request: Request):
+    service = get_user_service()
+    target_user, err = service.get(user_id)
+    if not err.success or not target_user:
+        raise HTTPException(status_code=404, detail="user not found")
+
+    current_user_org_id = getattr(request.state, 'user_org_id', None)
+
+    if target_user.org_id != current_user_org_id:
+        raise HTTPException(status_code=403, detail="permission denied")
+
+    data = {
+        'nickname': target_user.nickname,
+        'avatar_link': target_user.avatar_link,
     }
     return BaseResponse(error_code=0, error_info="success", data=data)
 

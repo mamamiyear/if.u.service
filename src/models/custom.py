@@ -6,6 +6,7 @@ import logging
 from typing import Dict, List
 from datetime import datetime
 from sqlalchemy import Column, Integer, String, Text, DateTime, func, Boolean
+from models.comment import Comment
 from utils.rldb import RLDBBaseModel
 from utils.error import ErrorCode, error
 
@@ -105,8 +106,8 @@ class Custom:
     
     # 客户信息
     custom_level: str
-    comments: Dict[str, str]
     is_public: bool
+    comments: List[Comment]
     created_at: datetime = None
 
     def __init__(self, **kwargs):
@@ -139,7 +140,7 @@ class Custom:
         self.match_requirement = kwargs.get('match_requirement', '')
         self.introductions = kwargs.get('introductions', {})
         self.custom_level = kwargs.get('custom_level', '')
-        self.comments = kwargs.get('comments', {})
+        self.comments = kwargs.get('comments', [])
         self.is_public = kwargs.get('is_public', False)
         self.created_at = kwargs.get('created_at')
 
@@ -189,7 +190,7 @@ class Custom:
             'match_requirement': self.match_requirement,
             'introductions': self.introductions,
             'custom_level': self.custom_level,
-            'comments': self.comments,
+            'comments': [c.to_dict() for c in self.comments],
             'created_at': int(self.created_at.timestamp()) if self.created_at else None,
         }
 
@@ -224,7 +225,7 @@ class Custom:
             match_requirement=data.match_requirement,
             introductions=json.loads(data.introductions) if data.introductions else {},
             custom_level=data.custom_level,
-            comments=json.loads(data.comments) if data.comments else {},
+            comments=[Comment.from_dict(c) for c in json.loads(data.comments)] if data.comments else [],
             is_public=data.is_public,
             created_at=data.created_at,
         )
@@ -260,7 +261,7 @@ class Custom:
             match_requirement=self.match_requirement,
             introductions=json.dumps(self.introductions, ensure_ascii=False),
             custom_level=self.custom_level,
-            comments=json.dumps(self.comments, ensure_ascii=False),
+            comments=json.dumps([c.to_dict() for c in self.comments], ensure_ascii=False),
             is_public=self.is_public,
         )
 

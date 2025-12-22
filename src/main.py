@@ -11,6 +11,7 @@ import uvicorn
 from services import people as people_service
 from services import user as user_service
 from services import custom as custom_service
+from services import organization as organization_service
 from utils import config, logger, obs, ocr, rldb, sms, mailer
 
 from web.api import api
@@ -30,6 +31,7 @@ def initialize_app(config_path):
     people_service.init()
     user_service.init()
     custom_service.init()
+    organization_service.init()
 
 # 主函数
 def main():

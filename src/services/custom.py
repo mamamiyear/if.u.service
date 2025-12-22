@@ -3,7 +3,10 @@
 
 import logging
 import uuid
+from typing import List
+from datetime import datetime
 from models.custom import Custom, CustomRLDBModel
+from models.comment import Comment
 from utils.error import ErrorCode, error
 from utils import rldb
 
@@ -84,6 +87,108 @@ class CustomService:
         except Exception as e:
             logging.error(f"Failed to list customs with conds {conds}: {e}")
             return [], error(ErrorCode.RLDB_ERROR, f"Failed to list custom data: {str(e)}")
+
+    def add_comment(self, custom_id: str, content: str, user_id: str) -> (Comment, error):
+        """
+        新增评论
+        
+        :param custom_id: 客户ID
+        :param content: 评论内容
+        :param user_id: 评论人ID
+        :return: Comment对象 和 错误对象
+        """
+        custom, err = self.get(custom_id)
+        if not err.success:
+            return None, err
+        
+        comment = Comment(
+            id=uuid.uuid4().hex,
+            content=content,
+            user_id=user_id,
+            created_at=datetime.now(),
+            updated_at=datetime.now()
+        )
+        custom.comments.append(comment)
+        
+        _, err = self.save(custom)
+        if not err.success:
+            return None, err
+            
+        return comment, error(ErrorCode.SUCCESS, "")
+
+    def update_comment(self, custom_id: str, comment_id: str, content: str, user_id: str) -> error:
+        """
+        更新评论
+        
+        :param custom_id: 客户ID
+        :param comment_id: 评论ID
+        :param content: 新的评论内容
+        :param user_id: 操作人ID（必须是评论创建人）
+        :return: 错误对象
+        """
+        custom, err = self.get(custom_id)
+        if not err.success:
+            return err
+            
+        target_comment = None
+        for comment in custom.comments:
+            if comment.id == comment_id:
+                target_comment = comment
+                break
+        
+        if not target_comment:
+            return error(ErrorCode.MODEL_NOT_FOUND, f"Comment {comment_id} not found")
+            
+        if target_comment.user_id != user_id:
+            return error(ErrorCode.PERMISSION_DENIED, "Permission denied: only author can update comment")
+            
+        target_comment.content = content
+        target_comment.updated_at = datetime.now()
+        
+        _, err = self.save(custom)
+        return err
+
+    def delete_comment(self, custom_id: str, comment_id: str, user_id: str) -> error:
+        """
+        删除评论
+        
+        :param custom_id: 客户ID
+        :param comment_id: 评论ID
+        :param user_id: 操作人ID（必须是评论创建人）
+        :return: 错误对象
+        """
+        custom, err = self.get(custom_id)
+        if not err.success:
+            return err
+            
+        target_index = -1
+        for i, comment in enumerate(custom.comments):
+            if comment.id == comment_id:
+                if comment.user_id != user_id:
+                    return error(ErrorCode.PERMISSION_DENIED, "Permission denied: only author can delete comment")
+                target_index = i
+                break
+        
+        if target_index == -1:
+            return error(ErrorCode.MODEL_NOT_FOUND, f"Comment {comment_id} not found")
+            
+        custom.comments.pop(target_index)
+        
+        _, err = self.save(custom)
+        return err
+
+    def get_comments(self, custom_id: str) -> (List[Comment], error):
+        """
+        获取所有评论
+        
+        :param custom_id: 客户ID
+        :return: 评论列表 和 错误对象
+        """
+        custom, err = self.get(custom_id)
+        if not err.success:
+            return [], err
+            
+        return custom.comments, error(ErrorCode.SUCCESS, "")
 
 # --- Singleton Pattern ---
 custom_service = None

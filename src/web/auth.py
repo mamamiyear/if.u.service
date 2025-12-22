@@ -25,4 +25,6 @@ def require_auth(request: Request, token: Optional[str] = Cookie(None)):
     request.state.user_nickname = user.nickname
     request.state.user_email = user.email
     request.state.user_phone = user.phone
+    request.state.user_org_id = user.org_id
+    request.state.user_org_role = user.org_role
     request.state.token = token
